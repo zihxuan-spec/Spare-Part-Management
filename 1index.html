@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>WMS Enterprise</title>
+    
+    <link rel="apple-touch-icon" href="https://placehold.co/180x180/354a5f/ffffff.png?text=WMS&font=roboto">
+    <link rel="icon" href="https://placehold.co/192x192/354a5f/ffffff.png?text=WMS&font=roboto">
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="loginOverlay" style="position:fixed; top:0; left:0; width:100%; height:100%; background:var(--sap-bg-color); z-index:9999; display:flex; justify-content:center; align-items:center;">
+    <div class="std-dialog" style="width:320px; padding:20px; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
+        <div style="text-align:center; margin-bottom:20px;">
+            <h2 style="color:var(--sap-shell-color); margin:0;">Sunlit AZ WMS</h2>
+            <p style="font-size:12px; color:#666; margin-top:5px;">Secure Enterprise Login</p>
+        </div>
+        <div style="display:grid; gap:15px;">
+            <input type="text" id="loginUser" class="std-input" placeholder="Username" style="width:100%;" oninput="clearLoginError()">
+            <input type="password" id="loginPass" class="std-input" placeholder="Password" style="width:100%;" oninput="clearLoginError()">
+            <div id="loginFeedback" style="color:#bb0000; font-size:13px; text-align:center; min-height:18px; font-weight:bold;"></div>
+            <button id="btnLogin" class="std-btn btn-primary" style="width:100%; justify-content:center; height:40px;" onclick="doLogin()" data-i18n="btn_signin">Sign In</button>
+            <div style="text-align:center; font-size:12px; margin-top:10px;">
+                <span style="color:#666;" data-i18n="txt_new_user">New User? </span>
+                <span style="color:var(--sap-primary); cursor:pointer; font-weight:bold;" onclick="openRegister()" data-i18n="link_register">Register Here</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="pendingOverlay" style="position:fixed; top:0; left:0; width:100%; height:100%; background:var(--sap-bg-color); z-index:9998; display:none; justify-content:center; align-items:center;">
+    <div class="std-dialog" style="width:350px; padding:30px; text-align:center;">
+        <div style="font-size:48px; margin-bottom:10px;">⏳</div>
+        <h2 style="margin:0; color:#333;">Account Pending</h2>
+        <p style="color:#666; font-size:14px; margin:15px 0 25px 0; line-height:1.5;">您的帳號目前正在審核中 (Pending Approval)。<br>請聯繫管理員為您分配部門權限。</p>
+        <button class="std-btn btn-primary" style="width:100%; justify-content:center;" onclick="doLogout()">Back to Login</button>
+    </div>
+</div>
+
+<div id="loading"><div class="loading-spinner"></div><div style="background:rgba(255,255,255,0.9); padding:5px 10px; border-radius:4px; margin-top:10px;">Loading...</div></div>
+
+<div class="shell-bar">
+    <div class="shell-logo"><span style="font-weight:bold; font-size:1.2em;">Sunlit AZ</span> WMS</div>
+    <div style="display:flex; gap:15px; align-items:center;">
+        <div id="userInfoDisplay" style="font-size:12px; color:#ddd; margin-right:10px;"></div>
+        <div id="changePassBtn" style="cursor:pointer; font-size:12px; opacity:0.9; display:none;" onclick="openChangePass()">🔑 Pwd</div>
+        <div style="cursor:pointer; font-size:12px; opacity:0.9;" onclick="toggleLanguage()">EN / 繁中</div>
+        <div id="logoutBtn" style="cursor:pointer; font-size:12px; opacity:0.9; display:none;" onclick="doLogout()">Logout ⏻</div>
+    </div>
+</div>
+
+<div class="page-header">
+    <div>
+        <div class="nav-tabs">
+            <div class="nav-item active" id="tabDash" onclick="switchView('dashboard')" data-i18n="tab_dash">Dashboard</div>
+            <div class="nav-item" id="tabInv" onclick="switchView('inventory')" data-i18n="tab_inv">Inventory</div>
+            <div class="nav-item" id="tabMaster" onclick="switchView('master')" data-i18n="tab_master">Master Data</div>
+        </div>
+        <div style="color:#6a6d70; font-size:12px; margin-top:8px;">Sunlit AZ / Spare Part Management</div>
+    </div>
+    <button class="std-btn btn-transparent" onclick="fetchData()"><span style="font-size:16px;">↻</span> <span data-i18n="btn_refresh">Refresh</span></button>
+</div>
+
+<div class="content-area">
+    <div id="viewDashboard">
+        <div class="dashboard-grid">
+            <div class="card alert" onclick="applyFilter('crit')" title="Click to filter"><div class="card-title" data-i18n="card_crit">Critical Stock</div><div class="card-value" id="dashCrit" style="color:#bb0000">0</div><div class="card-sub" data-i18n="sub_crit">Items Out of Stock</div></div>
+            <div class="card warn" onclick="applyFilter('low')" title="Click to filter"><div class="card-title" data-i18n="card_low">Low Stock</div><div class="card-value" id="dashLow" style="color:#e9730c">0</div><div class="card-sub" data-i18n="sub_low">Items below safety level</div></div>
+            <div class="card safe" onclick="applyFilter('all')" title="Show All"><div class="card-title" data-i18n="card_total">Total Items</div><div class="card-value" id="dashTotal">0</div><div class="card-sub" data-i18n="sub_total">Active SKU Count</div></div>
+            <div class="card" style="cursor: default;"><div class="card-title"><span data-i18n="card_hist">Recent Movements</span><button class="std-btn btn-transparent" style="font-size:12px; padding:2px 8px; height:auto;" onclick="openReportModal()">📊 Report</button></div><div style="font-size:12px; color:#555; max-height:100px; overflow-y:auto;" id="dashHistory"></div></div>
+        </div>
+    </div>
+
+    <div id="viewInventory" style="display:none;">
+        <div class="toolbar">
+            <button class="std-btn btn-po" onclick="openTxModal('receive')"><span data-i18n="btn_po">Goods Receipt</span></button>
+            <button class="std-btn btn-issue" onclick="openTxModal('issue')"><span data-i18n="btn_issue">Goods Issue</span></button>
+            <button class="std-btn btn-excel" onclick="exportToExcel('inventory')">📥 Excel</button>
+            <div class="spacer"></div>
+            <div id="filterTag" onclick="applyFilter('all')"><span id="filterText">Filter Active</span> <span style="font-size:14px; margin-left:2px;">✕</span></div>
+            <input type="text" id="searchInv" class="std-input" style="width:250px;" placeholder="Search Inventory..." onkeyup="renderTable(true)">
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr><th class="col-status"></th><th class="col-pn sortable" onclick="toggleSort('id')" data-i18n="col_pn">Part Number <span id="sort-id" class="sort-icon"></span></th><th class="col-model sortable desktop-only" onclick="toggleSort('model')" data-i18n="col_model">Model <span id="sort-model" class="sort-icon"></span></th><th class="col-desc sortable desktop-only" onclick="toggleSort('description')" data-i18n="col_desc">Description <span id="sort-description" class="sort-icon"></span></th><th class="col-loc sortable" onclick="toggleSort('location')" data-i18n="col_loc">Loc <span id="sort-location" class="sort-icon"></span></th><th class="col-stock sortable" onclick="toggleSort('stock')" data-i18n="col_stock">Stock <span id="sort-stock" class="sort-icon"></span></th><th class="col-unit desktop-only" data-i18n="col_unit">Unit</th><th class="col-action"></th></tr>
+                </thead>
+                <tbody id="inventoryBody"></tbody>
+            </table>
+            <div class="pagination-bar" id="invPagination"></div>
+        </div>
+    </div>
+
+    <div id="viewMaster" style="display:none;">
+        <div class="toolbar">
+            <button class="std-btn btn-master" onclick="openCreateMasterModal()"><span data-i18n="btn_create">Create Material</span></button>
+            <button class="std-btn btn-excel" onclick="exportToExcel('master')">📥 Excel</button>
+            <div class="spacer"></div>
+            <input type="text" id="searchMaster" class="std-input" style="width:250px;" placeholder="Search Master Data..." onkeyup="renderMasterTable(true)">
+        </div>
+        <div class="table-container">
+            <table>
+                <thead><tr><th class="col-pn" data-i18n="col_pn">Part Number</th><th class="col-model desktop-only" data-i18n="col_model">Model</th><th class="col-desc desktop-only" data-i18n="col_desc">Description</th><th class="col-unit" data-i18n="col_unit">Base UoM</th><th class="col-stock desktop-only" data-i18n="lbl_safe">Safety Stock</th><th class="col-action"></th></tr></thead>
+                <tbody id="masterBody"></tbody>
+            </table>
+            <div class="pagination-bar" id="masterPagination"></div>
+        </div>
+    </div>
+</div>
+
+<div id="registerModal" class="modal-overlay" style="z-index: 10002;">
+    <div class="std-dialog" style="width:350px;">
+        <div class="dialog-header"><span data-i18n="modal_reg_title">Register Account</span><span style="cursor:pointer;" onclick="closeModal('registerModal')">✕</span></div>
+        <div class="dialog-content">
+            <div style="display:grid; gap:15px;">
+                <div><label class="form-label" data-i18n="lbl_account">Username</label><input type="text" id="regUser" class="std-input"></div>
+                <div><label class="form-label" data-i18n="lbl_password">Password (Min 6 chars)</label><input type="password" id="regPass" class="std-input"></div>
+                <div><label class="form-label" data-i18n="lbl_name">Display Name</label><input type="text" id="regName" class="std-input"></div>
+                <div style="font-size:12px; color:#666; background:#f9f9f9; padding:10px; border-radius:4px;"><span data-i18n="msg_reg_note">Note: New accounts are set to "Pending". An admin must assign your department.</span></div>
+            </div>
+        </div>
+        <div class="dialog-footer"><button class="std-btn btn-transparent" onclick="closeModal('registerModal')" data-i18n="btn_cancel">Cancel</button><button class="std-btn btn-primary" onclick="doRegister()" data-i18n="btn_signup" id="btnDoRegister">Sign Up</button></div>
+    </div>
+</div>
+
+<div id="changePassModal" class="modal-overlay">
+    <div class="std-dialog" style="width:350px;">
+        <div class="dialog-header"><span data-i18n="modal_cp_title">Change Password</span><span style="cursor:pointer;" onclick="closeModal('changePassModal')">✕</span></div>
+        <div class="dialog-content"><div style="display:grid; gap:15px;"><div><label class="form-label" data-i18n="lbl_new_pass">New Password</label><input type="password" id="cpNew" class="std-input"></div><div><label class="form-label" data-i18n="lbl_confirm_pass">Confirm New</label><input type="password" id="cpConfirm" class="std-input"></div></div></div>
+        <div class="dialog-footer"><button class="std-btn btn-transparent" onclick="closeModal('changePassModal')" data-i18n="btn_cancel">Cancel</button><button class="std-btn btn-primary" onclick="doChangePass()" data-i18n="btn_change">Change</button></div>
+    </div>
+</div>
+
+<div id="txModal" class="modal-overlay">
+    <div class="std-dialog large">
+        <div class="dialog-header"><span id="txTitle">Post Goods Movement</span><span style="cursor:pointer;" onclick="closeModal('txModal')">✕</span></div>
+        <div class="dialog-content">
+            <div class="dialog-header-grid" style="display:grid; grid-template-columns: 2fr 1fr 1fr; gap:15px; margin-bottom:15px; padding-bottom:15px; border-bottom:1px solid #eee;">
+                <div><label class="form-label" data-i18n="lbl_ref">PO Number/Reference</label><input type="text" id="txRef" class="std-input"></div>
+                <div><label class="form-label" data-i18n="lbl_user">User</label><input type="text" id="txUser" class="std-input" disabled></div>
+                <div><label class="form-label" data-i18n="lbl_date">Date</label><input type="text" id="txDate" class="std-input" disabled style="background:#f9f9f9;"></div>
+            </div>
+            <table class="tx-table">
+                <thead><tr><th style="width:140px;" data-i18n="col_pn">Part Number</th><th style="min-width:150px;" data-i18n="col_desc">Description</th><th style="width:80px;" data-i18n="lbl_qty">Qty</th><th style="width:70px;" data-i18n="col_loc">Loc</th><th style="width:30px;"></th></tr></thead>
+                <tbody id="txBody"></tbody>
+            </table>
+            <button class="std-btn btn-transparent" style="width:100%; border:1px dashed #0a6ed1; color:#0a6ed1;" onclick="addTxRow()">+ <span data-i18n="btn_add_line">Add Line</span></button>
+        </div>
+        <div class="dialog-footer"><button class="std-btn btn-transparent" onclick="closeModal('txModal')" data-i18n="btn_cancel">Cancel</button><button class="std-btn btn-primary" id="txSubmitBtn" onclick="submitTx()" data-i18n="btn_post">Post</button></div>
+    </div>
+</div>
+
+<div id="createModal" class="modal-overlay">
+    <div class="std-dialog">
+        <div class="dialog-header"><span data-i18n="btn_create">Create Material</span><span style="cursor:pointer;" onclick="closeModal('createModal')">✕</span></div>
+        <div class="dialog-content">
+            <div class="form-grid">
+                <div class="form-full"><label class="form-label" data-i18n="col_pn">Part Number</label><input type="text" id="newId" class="std-input" onchange="checkMasterExists()"><div id="masterFeedback" style="font-size:11px;"></div></div>
+                <div class="form-full"><label class="form-label" data-i18n="col_model">Model</label><input type="text" id="newModel" class="std-input"></div>
+                <div class="form-full"><label class="form-label" data-i18n="col_desc">Description</label><input type="text" id="newDesc" class="std-input"></div>
+                <div><label class="form-label" data-i18n="col_unit">Base UoM</label><input type="text" id="newUnit" class="std-input"></div>
+                <div><label class="form-label" data-i18n="lbl_safe">Safety Stock</label><input type="number" id="newMinStock" class="std-input" value="0"></div>
+                <div><label class="form-label">Department</label><input type="text" id="newDept" class="std-input" readonly disabled style="background:#f5f5f5; color:#666;"></div>
+                <div><label class="form-label" data-i18n="lbl_user">User</label><input type="text" id="newUser" class="std-input" readonly disabled style="background:#f5f5f5; color:#666;"></div>
+            </div>
+        </div>
+        <div class="dialog-footer"><button class="std-btn btn-transparent" onclick="closeModal('createModal')" data-i18n="btn_cancel">Cancel</button><button class="std-btn btn-primary" onclick="submitCreateMaster()" data-i18n="btn_save">Save</button></div>
+    </div>
+</div>
+
+<div id="reportModal" class="modal-overlay">
+    <div class="std-dialog"><div class="dialog-header"><span>Download History Report</span><span style="cursor:pointer;" onclick="closeModal('reportModal')">✕</span></div><div class="dialog-content"><div style="margin-bottom:15px;"><label class="form-label">Start Date</label><input type="date" id="rptStart" class="std-input"></div><div><label class="form-label">End Date</label><input type="date" id="rptEnd" class="std-input"></div></div><div class="dialog-footer"><button class="std-btn btn-transparent" onclick="closeModal('reportModal')">Cancel</button><button class="std-btn btn-primary" onclick="downloadReport()">📥 Download Excel</button></div></div>
+</div>
+
+<div id="detailsModal" class="modal-overlay">
+    <div class="std-dialog">
+        <div class="dialog-header"><span data-i18n="modal_detail">Details</span><span style="cursor:pointer;" onclick="closeModal('detailsModal')">✕</span></div>
+        <div class="dialog-content">
+            <div style="border-bottom:1px solid #eee; padding-bottom:15px; margin-bottom:15px;"><h2 id="detId" style="margin:0 0 5px 0; color:var(--sap-shell-color); font-family:monospace;"></h2><div id="detModel" style="color:#333; font-weight:bold; margin-bottom:5px;"></div><div id="detDesc" style="color:#666; font-size:0.95em;"></div></div>
+            <div style="background:#f8f9fa; padding:15px; border-radius:4px; border:1px solid #eee; display:flex; justify-content:space-between; align-items:center;"><div><div style="font-size:11px; color:#666;" data-i18n="col_stock">STOCK</div><div id="detStock" style="font-size:32px; font-weight:normal;">0</div></div><div style="text-align:right;"><div style="font-size:11px; color:#666;" data-i18n="col_loc">LOCATION</div><div id="detLoc" style="font-size:18px; font-weight:bold; background:#e0e0e0; padding:2px 8px; border-radius:4px;">-</div></div></div>
+            <div style="font-size:12px; font-weight:bold; color:#6a6d70; margin-top:20px; margin-bottom:5px;" data-i18n="card_hist">HISTORY</div><div id="detHistory" style="border:1px solid #eee; border-radius:4px; max-height:200px; overflow-y:auto; font-size:12px; padding:10px;"></div>
+        </div>
+        <div class="dialog-footer"><button class="std-btn btn-transparent" onclick="closeModal('detailsModal')" data-i18n="btn_close">Close</button></div>
+    </div>
+</div>
+
+<div id="msgModal" class="modal-overlay" style="z-index: 10003;">
+    <div class="std-dialog" style="width: 400px; max-width: 90%;"><div class="dialog-header"><span id="msgTitle" style="color: var(--sap-critical);">System Message</span></div><div class="dialog-content" id="msgContent" style="padding: 20px; font-size: 14px; white-space: pre-wrap; color: #333;"></div><div class="dialog-footer"><button class="std-btn btn-primary" onclick="closeModal('msgModal')" data-i18n="btn_ok">OK</button></div></div>
+</div>
+
+<div id="toast" class="toast"></div>
+    <script src="app.js"></script>
+</body>
+</html>
