@@ -1,4 +1,3 @@
- <style>
         /* CSS 完全不變，維持 Fiori 樣式 */
         :root {
             --sap-shell-color: #354a5f; --sap-bg-color: #edf0f4; --sap-surface-color: #ffffff;
@@ -112,4 +111,3 @@
             .mobile-model { font-size: 13px; color: #444; font-weight: 500; margin-bottom: 2px; white-space: normal; line-height: 1.3; }
             .mobile-desc { font-size: 12px; color: #888; line-height: 1.3; white-space: normal; }
         }
-    </style>
