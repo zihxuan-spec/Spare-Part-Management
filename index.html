@@ -3,19 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>WMS</title>
+    <title>WMS Enterprise</title>
     
     <link rel="apple-touch-icon" href="https://placehold.co/180x180/354a5f/ffffff.png?text=WMS&font=roboto">
     <link rel="icon" href="https://placehold.co/192x192/354a5f/ffffff.png?text=WMS&font=roboto">
     
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <style>
-        /* --- CSS 樣式完全保留 --- */
+        /* CSS 保持您原本完美適應的 SAP Fiori 樣式 */
         :root {
             --sap-shell-color: #354a5f; --sap-bg-color: #edf0f4; --sap-surface-color: #ffffff;
             --sap-text-color: #32363a; --sap-border-color: #d9d9d9;
@@ -313,11 +310,11 @@
 <div id="toast" class="toast"></div>
 
 <script>
-    // 🔥 請在此處填寫您的 Supabase URL 與 Anon Key
+    // -------------------------
+    // 1. 初始化與環境設定
+    // -------------------------
     const supabaseUrl = 'https://gvsglqvfkgfdymcntldb.supabase.co';
     const supabaseKey = 'sb_publishable_s5grpgB4G9GP1gF9_YIcqw_f9cz-ZB7';
-    
-    // 💡 修正點：將變數名稱從 supabase 改為 supaClient，避免與上方引入的套件衝突
     const supaClient = supabase.createClient(supabaseUrl, supabaseKey);
 
     let inventoryList = [];
@@ -329,465 +326,280 @@
     let currentUserName = ""; 
     let currentUserDept = "";
 
-    let curPageInv = 1;
-    let curPageMaster = 1;
+    let curPageInv = 1, curPageMaster = 1;
     const pageSize = 50;
-    let sortCol = '';
-    let sortAsc = true;
-    let currentFilter = 'all';
-
+    let sortCol = '', sortAsc = true, currentFilter = 'all';
     let logoutTimer;
     const AUTO_LOGOUT_TIME = 30 * 60 * 1000; 
 
     // 翻譯字庫
     const i18n = {
-        en: {
-            tab_inv: "Inventory", tab_dash: "Dashboard", tab_master: "Master Data", btn_refresh: "Refresh",
-            btn_po: "Goods Receipt", btn_issue: "Goods Issue", btn_create: "Create Material",
-            col_pn: "Part Number", col_model: "Model", col_desc: "Description", col_loc: "Loc", col_stock: "Stock", col_unit: "Unit",
-            lbl_ref: "PO Number/Reference", lbl_user: "User", lbl_date: "Date", lbl_qty: "Qty", lbl_safe: "Safety Stock",
-            btn_add_line: "Add Line", btn_cancel: "Cancel", btn_post: "Post", btn_save: "Save", btn_close: "Close", btn_ok: "OK",
-            card_crit: "Critical Stock", sub_crit: "Items Out of Stock", card_low: "Low Stock", sub_low: "Below Safety Level", card_total: "Total Items", sub_total: "Active SKU Count", card_hist: "Recent Movements", modal_detail: "Details", txt_display: "Display", btn_logout: "Logout", btn_pwd: "Pwd", lbl_account: "Username", lbl_password: "Password", lbl_name: "Display Name", btn_signin: "Sign In", btn_signup: "Sign Up", btn_change: "Change", txt_new_user: "New User?", link_register: "Register Here", modal_reg_title: "Register Account", modal_cp_title: "Change Password", lbl_old_pass: "Old Password", lbl_new_pass: "New Password", lbl_confirm_pass: "Confirm New", msg_reg_success: "Register Success! Please Login.", msg_pass_changed: "Password Changed! Please login again.", msg_pass_mismatch: "Passwords do not match", msg_fill_all: "All fields required", msg_auto_logout: "Session timed out due to inactivity.", title_auto_logout: "Auto Logout", confirm_post_title: "Post Confirmation", confirm_post_body: "Are you sure you want to post these transactions?", confirm_delete: "Delete this master data?", deleted: "Deleted!", msg_input_required: "Input Required", msg_input_empty: "Please fill in PO/Reference and User field.", error_title: "Insufficient Stock", error_msg: "Cannot issue more than available stock.", txt_page: "Page", txt_of: "of", msg_reg_note: "Note: New accounts are set to 'Pending'. An admin must assign your department."
-        },
-        zh: {
-            tab_inv: "庫存列表", tab_dash: "管理看板", tab_master: "物料主檔", btn_refresh: "刷新",
-            btn_po: "收貨入庫", btn_issue: "發貨領料", btn_create: "建立物料",
-            col_pn: "料號", col_model: "型號", col_desc: "品名描述", col_loc: "儲位", col_stock: "庫存", col_unit: "單位",
-            lbl_ref: "採購單號/用途", lbl_user: "操作人員", lbl_date: "日期", lbl_qty: "數量", lbl_safe: "安全庫存",
-            btn_add_line: "新增項目", btn_cancel: "取消", btn_post: "過帳", btn_save: "儲存", btn_close: "關閉", btn_ok: "確定",
-            card_crit: "缺料警告", sub_crit: "庫存為 0", card_low: "低庫存", sub_low: "低於安全水位", card_total: "物料總數", sub_total: "系統內 SKU", card_hist: "最近異動", modal_detail: "詳細資訊", txt_display: "查看", btn_logout: "登出", btn_pwd: "密碼", lbl_account: "帳號", lbl_password: "密碼", lbl_name: "顯示名稱", btn_signin: "登入", btn_signup: "註冊", btn_change: "修改", txt_new_user: "還沒帳號?", link_register: "點此註冊", modal_reg_title: "註冊帳號", modal_cp_title: "修改密碼", lbl_old_pass: "舊密碼", lbl_new_pass: "新密碼", lbl_confirm_pass: "確認新密碼", msg_reg_success: "註冊成功！請登入。", msg_pass_changed: "密碼已修改！請重新登入。", msg_pass_mismatch: "新密碼不一致", msg_fill_all: "請填寫所有欄位", msg_auto_logout: "閒置過久，系統已自動登出。", title_auto_logout: "自動登出", confirm_post_title: "過帳確認", confirm_post_body: "您確定要提交這些異動資料嗎？", confirm_delete: "確定要刪除此物料主檔嗎？", deleted: "已刪除！", msg_input_required: "欄位必填", msg_input_empty: "請填寫單號/用途與操作人員欄位。", error_title: "庫存不足", error_msg: "領料數量不可大於現有庫存。", txt_page: "第", txt_of: "頁 / 共", msg_reg_note: "注意：新帳號預設為「待審核」，需由管理員分配部門權限。"
-        }
+        en: { tab_inv: "Inventory", tab_dash: "Dashboard", tab_master: "Master Data", btn_refresh: "Refresh", btn_po: "Goods Receipt", btn_issue: "Goods Issue", btn_create: "Create Material", col_pn: "Part Number", col_model: "Model", col_desc: "Description", col_loc: "Loc", col_stock: "Stock", col_unit: "Unit", lbl_ref: "PO Number/Reference", lbl_user: "User", lbl_date: "Date", lbl_qty: "Qty", lbl_safe: "Safety Stock", btn_add_line: "Add Line", btn_cancel: "Cancel", btn_post: "Post", btn_save: "Save", btn_close: "Close", btn_ok: "OK", card_crit: "Critical Stock", sub_crit: "Items Out of Stock", card_low: "Low Stock", sub_low: "Below Safety Level", card_total: "Total Items", sub_total: "Active SKU Count", card_hist: "Recent Movements", modal_detail: "Details", txt_display: "Display", btn_logout: "Logout", btn_pwd: "Pwd", lbl_account: "Username", lbl_password: "Password", lbl_name: "Display Name", btn_signin: "Sign In", btn_signup: "Sign Up", btn_change: "Change", txt_new_user: "New User?", link_register: "Register Here", modal_reg_title: "Register Account", modal_cp_title: "Change Password", lbl_old_pass: "Old Password", lbl_new_pass: "New Password", lbl_confirm_pass: "Confirm New", msg_reg_success: "Register Success! Please Login.", msg_pass_changed: "Password Changed! Please login again.", msg_pass_mismatch: "Passwords do not match", msg_fill_all: "All fields required", msg_auto_logout: "Session timed out due to inactivity.", title_auto_logout: "Auto Logout", confirm_post_title: "Post Confirmation", confirm_post_body: "Are you sure you want to post these transactions?", confirm_delete: "Delete this master data?", deleted: "Deleted!", msg_input_required: "Input Required", msg_input_empty: "Please fill in PO/Reference and User field.", error_title: "Insufficient Stock", error_msg: "Cannot issue more than available stock.", txt_page: "Page", txt_of: "of", msg_reg_note: "Note: New accounts are set to 'Pending'. An admin must assign your department." },
+        zh: { tab_inv: "庫存列表", tab_dash: "管理看板", tab_master: "物料主檔", btn_refresh: "刷新", btn_po: "收貨入庫", btn_issue: "發貨領料", btn_create: "建立物料", col_pn: "料號", col_model: "型號", col_desc: "品名描述", col_loc: "儲位", col_stock: "庫存", col_unit: "單位", lbl_ref: "採購單號/用途", lbl_user: "操作人員", lbl_date: "日期", lbl_qty: "數量", lbl_safe: "安全庫存", btn_add_line: "新增項目", btn_cancel: "取消", btn_post: "過帳", btn_save: "儲存", btn_close: "關閉", btn_ok: "確定", card_crit: "缺料警告", sub_crit: "庫存為 0", card_low: "低庫存", sub_low: "低於安全水位", card_total: "物料總數", sub_total: "系統內 SKU", card_hist: "最近異動", modal_detail: "詳細資訊", txt_display: "查看", btn_logout: "登出", btn_pwd: "密碼", lbl_account: "帳號", lbl_password: "密碼", lbl_name: "顯示名稱", btn_signin: "登入", btn_signup: "註冊", btn_change: "修改", txt_new_user: "還沒帳號?", link_register: "點此註冊", modal_reg_title: "註冊帳號", modal_cp_title: "修改密碼", lbl_old_pass: "舊密碼", lbl_new_pass: "新密碼", lbl_confirm_pass: "確認新密碼", msg_reg_success: "註冊成功！請登入。", msg_pass_changed: "密碼已修改！請重新登入。", msg_pass_mismatch: "新密碼不一致", msg_fill_all: "請填寫所有欄位", msg_auto_logout: "閒置過久，系統已自動登出。", title_auto_logout: "自動登出", confirm_post_title: "過帳確認", confirm_post_body: "您確定要提交這些異動資料嗎？", confirm_delete: "確定要刪除此物料主檔嗎？", deleted: "已刪除！", msg_input_required: "欄位必填", msg_input_empty: "請填寫單號/用途與操作人員欄位。", error_title: "庫存不足", error_msg: "領料數量不可大於現有庫存。", txt_page: "第", txt_of: "頁 / 共", msg_reg_note: "注意：新帳號預設為「待審核」，需由管理員分配部門權限。" }
     };
 
-    document.addEventListener("DOMContentLoaded", function() {
-        document.getElementById('loginUser').addEventListener('keypress', function (e) { if (e.key === 'Enter') doLogin(); });
-        document.getElementById('loginPass').addEventListener('keypress', function (e) { if (e.key === 'Enter') doLogin(); });
-        document.getElementById('regName').addEventListener('keypress', function (e) { if (e.key === 'Enter') doRegister(); });
-        document.getElementById('cpConfirm').addEventListener('keypress', function (e) { if (e.key === 'Enter') doChangePass(); });
+    document.addEventListener("DOMContentLoaded", () => {
+        ['loginUser', 'loginPass', 'regName', 'cpConfirm'].forEach(id => {
+            document.getElementById(id)?.addEventListener('keypress', e => { if (e.key === 'Enter') document.getElementById(id).blur() || e.target.closest('.std-dialog').querySelector('.btn-primary').click(); });
+        });
+        checkAutoLogin();
     });
 
-    function showMsg(title, text) {
-        document.getElementById('msgTitle').innerText = title;
-        document.getElementById('msgTitle').style.color = "var(--sap-critical)"; 
-        document.getElementById('msgContent').innerText = text;
-        const okBtn = document.querySelector('#msgModal .btn-primary');
-        okBtn.onclick = function() { closeModal('msgModal'); };
-        openModal('msgModal');
+    // -------------------------
+    // 2. 核心 API 互動層 (Supabase)
+    // -------------------------
+    async function fetchData() {
+        setLoading(true);
+        try {
+            // 抓取主檔
+            const { data: masterData } = await supaClient.from('master').select('*');
+            materialMaster = {};
+            if (masterData) {
+                masterData.forEach(item => {
+                    materialMaster[item.part_number] = { model: item.model || '', description: item.description || '', unit: item.unit || '', minStock: Number(item.main_stock || 0) };
+                });
+            }
+
+            // 抓取庫存並透過 JOIN 取得主檔資訊 (正規化應用)
+            const { data: invData } = await supaClient.from('inventory').select('*, master(model, description, unit, main_stock)');
+            inventoryList = (invData || []).map(item => ({
+                id: item.part_number,
+                stock: Number(item.stock),
+                location: item.location,
+                model: item.master?.model || '',
+                description: item.master?.description || '',
+                unit: item.master?.unit || '',
+                minStock: Number(item.master?.main_stock || 0)
+            }));
+
+            // 抓取歷史
+            const { data: histData } = await supaClient.from('history').select('*').order('timestamp', { ascending: false }).limit(200);
+            historyList = (histData || []).map(h => ({ id: h.part_number, date: h.timestamp, ref: h.reference, action: h.action, qty: Number(h.quantity), user: h.operator_user, note: h.note || '' }));
+
+            renderTable(); renderDashboard(); renderMasterTable();
+        } catch(e) { console.error(e); showToast("Network Error", true); } finally { setLoading(false); }
     }
 
-    function getTrans(key) { return i18n[currentLang][key] || key; }
+    async function executeSubmit(items) {
+        const ref = document.getElementById('txRef').value;
+        const displayUser = document.getElementById('txUser').value;
+        if(items.length === 0) return; setLoading(true);
 
-    function checkAutoLogin() {
-        const savedUser = sessionStorage.getItem('wms_user');
-        const savedUid = sessionStorage.getItem('wms_uid');
-        const savedDept = sessionStorage.getItem('wms_dept');
-        const lastActive = sessionStorage.getItem('wms_last_active');
+        try {
+            // 呼叫預存程序 RPC，解決 Race Condition
+            const { data, error } = await supaClient.rpc('process_transaction', {
+                tx_type: currentTxType,
+                tx_ref: ref,
+                tx_user: displayUser,
+                tx_items: items // [{id, qty, loc}]
+            });
 
-        if (lastActive && (Date.now() - lastActive > AUTO_LOGOUT_TIME)) { doLogout(); return; }
-        if (savedUser) applyLoginState(savedUser, savedUid, savedDept);
-    }
-
-    function resetLogoutTimer() {
-        if (!sessionStorage.getItem('wms_user')) return; 
-        sessionStorage.setItem('wms_last_active', Date.now());
-        clearTimeout(logoutTimer);
-        logoutTimer = setTimeout(() => { doLogout(); }, AUTO_LOGOUT_TIME);
-    }
-
-    ['mousemove', 'keydown', 'click', 'touchstart'].forEach(evt => document.addEventListener(evt, resetLogoutTimer));
-
-    async function doLogin() {
-        const user = document.getElementById('loginUser').value.trim();
-        const pass = document.getElementById('loginPass').value.trim();
-        const feedback = document.getElementById('loginFeedback');
-        const btn = document.getElementById('btnLogin'); 
-        
-        feedback.innerText = "";
-        if(!user || !pass) { feedback.style.color = "#bb0000"; feedback.innerText = "Please enter username and password"; return; }
-        
-        btn.innerText = "Connecting..."; btn.disabled = true; setLoading(true); 
-        
-        // 💡 修正點：使用 supaClient 呼叫 API
-        const { data, error } = await supaClient.from('users').select('*').eq('username', user).eq('password', pass).single();
-        
-        setLoading(false);
-        if(data) {
-            feedback.innerText = "Success!";
-            sessionStorage.setItem('wms_user', data.name);
-            sessionStorage.setItem('wms_uid', data.username); 
-            sessionStorage.setItem('wms_dept', data.department); // 對應 DB department 欄位
-            sessionStorage.setItem('wms_last_active', Date.now()); 
-            applyLoginState(data.name, data.username, data.department);
-        } else {
-            feedback.style.color = "#bb0000";
-            feedback.innerText = "Invalid Credentials";
-            btn.innerText = getTrans('btn_signin'); btn.disabled = false;
+            if (error) throw error;
+            showToast("Transaction Posted!");
+            closeModal('txModal');
+            fetchData(); // 重新抓取最新資料確保同步
+        } catch(e) { 
+            showMsg("Transaction Failed", e.message || "Unknown Error"); 
+        } finally { 
+            setLoading(false); 
         }
     }
 
-    function openRegister() { ['regUser','regPass','regName'].forEach(id => document.getElementById(id).value = ""); openModal('registerModal'); }
+    // -------------------------
+    // 3. 帳號與權限層
+    // -------------------------
+    async function doLogin() {
+        const user = document.getElementById('loginUser').value.trim(), pass = document.getElementById('loginPass').value.trim();
+        const fb = document.getElementById('loginFeedback'), btn = document.getElementById('btnLogin'); 
+        fb.innerText = "";
+        if(!user || !pass) { fb.style.color = "#bb0000"; fb.innerText = "Please enter username and password"; return; }
+        
+        btn.innerText = "Connecting..."; btn.disabled = true; setLoading(true); 
+        const { data } = await supaClient.from('users').select('*').eq('username', user).eq('password', pass).maybeSingle();
+        setLoading(false);
 
-    async function doRegister() {
-        const u = document.getElementById('regUser').value.trim();
-        const p = document.getElementById('regPass').value.trim();
-        const n = document.getElementById('regName').value.trim();
-        const btn = document.getElementById('btnDoRegister');
-        
-        if(!u || !p || !n) { showToast(getTrans('msg_fill_all'), true); return; }
-        btn.disabled = true; btn.innerText = "Processing..."; setLoading(true);
-        
-        // 💡 修正點：使用 supaClient
-        const { error } = await supaClient.from('users').insert([{ username: u, password: p, name: n, department: 'Pending' }]);
-        
-        setLoading(false); btn.disabled = false; btn.innerText = getTrans('btn_signup');
-        if(!error) {
-            closeModal('registerModal');
-            showMsg("Registration Sent", currentLang === 'en' ? "Registration sent! Your account is 'Pending'." : "申請已送出！您的帳號目前為 '待審核' 狀態。");
-        } else { showMsg("Error", error.message); }
+        if(data) {
+            fb.innerText = "Success!";
+            sessionStorage.setItem('wms_user', data.name); sessionStorage.setItem('wms_uid', data.username); sessionStorage.setItem('wms_dept', data.department); sessionStorage.setItem('wms_last_active', Date.now()); 
+            applyLoginState(data.name, data.username, data.department);
+        } else {
+            fb.style.color = "#bb0000"; fb.innerText = "Invalid Credentials"; btn.innerText = getTrans('btn_signin'); btn.disabled = false;
+        }
     }
 
-    function openChangePass() { ['cpOld','cpNew','cpConfirm'].forEach(id => document.getElementById(id).value = ""); openModal('changePassModal'); }
+    async function doRegister() {
+        const u = document.getElementById('regUser').value.trim(), p = document.getElementById('regPass').value.trim(), n = document.getElementById('regName').value.trim();
+        if(!u || !p || !n) { showToast(getTrans('msg_fill_all'), true); return; }
+        setLoading(true);
+        const { error } = await supaClient.from('users').insert([{ username: u, password: p, name: n, department: 'Pending' }]);
+        setLoading(false);
+        if(!error) { closeModal('registerModal'); showMsg("Registration Sent", currentLang === 'en' ? "Registration sent! Your account is 'Pending'." : "申請已送出！您的帳號目前為 '待審核' 狀態。"); } 
+        else { showMsg("Error", error.message); }
+    }
 
     async function doChangePass() {
-        const oldP = document.getElementById('cpOld').value.trim();
-        const newP = document.getElementById('cpNew').value.trim();
-        const confP = document.getElementById('cpConfirm').value.trim();
-        
+        const oldP = document.getElementById('cpOld').value.trim(), newP = document.getElementById('cpNew').value.trim(), confP = document.getElementById('cpConfirm').value.trim();
         if(!oldP || !newP) { showToast(getTrans('msg_fill_all'), true); return; }
         if(newP !== confP) { showToast(getTrans('msg_pass_mismatch'), true); return; }
-        
         setLoading(true);
-        const { data } = await supaClient.from('users').select('password').eq('username', currentUserName).single();
+        const { data } = await supaClient.from('users').select('password').eq('username', currentUserName).maybeSingle();
         if(data && data.password === oldP) {
             const { error } = await supaClient.from('users').update({ password: newP }).eq('username', currentUserName);
             setLoading(false);
-            if(!error) {
-                showToast(getTrans('msg_pass_changed')); closeModal('changePassModal');
-                setTimeout(() => { doLogout(); }, 1500);
-            } else { showMsg("Error", error.message); }
+            if(!error) { showToast(getTrans('msg_pass_changed')); closeModal('changePassModal'); setTimeout(() => { doLogout(); }, 1500); } 
+            else { showMsg("Error", error.message); }
         } else { setLoading(false); showMsg("Error", "Old password incorrect"); }
     }
 
-    function clearLoginError() { document.getElementById('loginFeedback').innerText = ""; const btn = document.getElementById('btnLogin'); if(btn.disabled) { btn.disabled = false; btn.innerText = getTrans('btn_signin'); } }
+    function checkAutoLogin() {
+        const sUser = sessionStorage.getItem('wms_user'), sUid = sessionStorage.getItem('wms_uid'), sDept = sessionStorage.getItem('wms_dept'), lastAct = sessionStorage.getItem('wms_last_active');
+        if (lastAct && (Date.now() - lastAct > AUTO_LOGOUT_TIME)) { doLogout(); return; }
+        if (sUser) applyLoginState(sUser, sUid, sDept);
+    }
 
     function applyLoginState(name, uid, dept) {
         currentUserDisplayName = name; currentUserName = uid; currentUserDept = dept;
         document.getElementById('loginOverlay').style.display = 'none';
         if (currentUserDept === "Pending") { document.getElementById('pendingOverlay').style.display = 'flex'; return; }
-        
-        document.getElementById('pendingOverlay').style.display = 'none';
-        document.getElementById('logoutBtn').style.display = 'block';
-        document.getElementById('changePassBtn').style.display = 'block'; 
-        document.getElementById('userInfoDisplay').innerText = `${currentUserDisplayName} (${currentUserDept})`;
-        
-        showToast("Welcome, " + currentUserDisplayName);
-        fetchData(); resetLogoutTimer(); 
+        document.getElementById('pendingOverlay').style.display = 'none'; document.getElementById('logoutBtn').style.display = 'block'; document.getElementById('changePassBtn').style.display = 'block'; document.getElementById('userInfoDisplay').innerText = `${currentUserDisplayName} (${currentUserDept})`;
+        showToast("Welcome, " + currentUserDisplayName); fetchData(); resetLogoutTimer(); 
     }
-
+    
+    function resetLogoutTimer() { if (!sessionStorage.getItem('wms_user')) return; sessionStorage.setItem('wms_last_active', Date.now()); clearTimeout(logoutTimer); logoutTimer = setTimeout(() => { doLogout(); }, AUTO_LOGOUT_TIME); }
+    ['mousemove', 'keydown', 'click', 'touchstart'].forEach(evt => document.addEventListener(evt, resetLogoutTimer));
     function doLogout() { sessionStorage.clear(); location.reload(); }
+    function clearLoginError() { document.getElementById('loginFeedback').innerText = ""; const btn = document.getElementById('btnLogin'); if(btn.disabled) { btn.disabled = false; btn.innerText = getTrans('btn_signin'); } }
+    function openRegister() { ['regUser','regPass','regName'].forEach(id => document.getElementById(id).value = ""); openModal('registerModal'); }
+    function openChangePass() { ['cpOld','cpNew','cpConfirm'].forEach(id => document.getElementById(id).value = ""); openModal('changePassModal'); }
 
-    async function fetchData() {
-        setLoading(true);
-        try {
-            // 💡 修正點：使用 supaClient
-            const { data: masterData } = await supaClient.from('master').select('*');
-            materialMaster = {};
-            if(masterData) {
-                masterData.forEach(item => {
-                    materialMaster[item.part_number] = {
-                        model: item.model || '',
-                        description: item.description || '',
-                        unit: item.unit || '',
-                        minStock: Number(item.main_stock || 0)
-                    };
-                });
-            }
+    // -------------------------
+    // 4. UI 渲染與事件層
+    // -------------------------
+    function showMsg(title, text) { document.getElementById('msgTitle').innerText = title; document.getElementById('msgTitle').style.color = "var(--sap-critical)"; document.getElementById('msgContent').innerText = text; document.querySelector('#msgModal .btn-primary').onclick = () => closeModal('msgModal'); openModal('msgModal'); }
+    function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+    function setLoading(b) { document.getElementById('loading').style.display = b?'block':'none'; document.querySelector('.table-container').style.opacity = b?0.5:1; }
+    function showToast(msg, err) { const t = document.getElementById('toast'); t.innerText = msg; t.style.background = err ? "#bb0000" : "#32363a"; t.style.opacity = 1; setTimeout(()=>t.style.opacity=0, 3000); }
 
-            const { data: invData } = await supaClient.from('inventory').select('*');
-            inventoryList = (invData || []).map(item => {
-                const m = materialMaster[item.part_number] || {};
-                return {
-                    id: item.part_number,        
-                    stock: Number(item.stock),   
-                    location: item.location,     
-                    model: m.model || '',
-                    description: m.description || '',
-                    unit: m.unit || '',
-                    minStock: Number(m.minStock || 0)
-                };
-            });
-
-            const { data: histData } = await supaClient.from('history').select('*').order('timestamp', { ascending: false }).limit(200);
-            historyList = (histData || []).map(h => ({
-                id: h.part_number,        
-                date: h.timestamp,        
-                ref: h.reference,         
-                action: h.action,         
-                qty: Number(h.quantity),  
-                user: h.operator_user,    
-                note: h.note || ''
-            }));
-
-            renderTable(); renderDashboard(); renderMasterTable();
-        } catch(e) { console.error(e); showToast("Network Error", true); }
-        finally { setLoading(false); }
-    }
-
-    function applyFilter(filterType) {
-        currentFilter = filterType; switchView('inventory'); renderTable(true);
-        const tag = document.getElementById('filterTag'), text = document.getElementById('filterText');
-        if(filterType === 'all') tag.style.display = 'none';
-        else { tag.style.display = 'inline-flex'; text.innerText = filterType === 'crit' ? "Showing: Critical Stock" : "Showing: Low Stock"; }
-    }
-
-    function openReportModal() {
-        const now = new Date(), yyyy = now.getFullYear(), mm = String(now.getMonth() + 1).padStart(2, '0'), dd = String(now.getDate()).padStart(2, '0');
-        document.getElementById('rptStart').value = `${yyyy}-${mm}-01`; document.getElementById('rptEnd').value = `${yyyy}-${mm}-${dd}`;
-        openModal('reportModal');
-    }
-
-    async function downloadReport() {
-        const start = document.getElementById('rptStart').value, end = document.getElementById('rptEnd').value;
-        if(!start || !end) { showToast("Select dates!", true); return; }
-        setLoading(true);
-        
-        const endDay = new Date(end); endDay.setDate(endDay.getDate() + 1);
-        const { data, error } = await supaClient.from('history').select('timestamp, reference, action, part_number, quantity, operator_user, note').gte('timestamp', start).lt('timestamp', endDay.toISOString());
-        
-        setLoading(false);
-        if(error) showMsg("Error", error.message);
-        else if(!data || data.length === 0) showMsg("No Data", "No movements found.");
-        else {
-            const ws = XLSX.utils.json_to_sheet(data); const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "Report"); XLSX.writeFile(wb, `Report_${start}_to_${end}.xlsx`);
-            closeModal('reportModal');
-        }
-    }
-
-    function exportToExcel(type) {
-        let data = [], filename = "";
-        if (type === 'inventory') {
-            filename = "Inventory_List.xlsx";
-            data = inventoryList.map(i => ({ "Part Number": i.id, "Model": i.model, "Description": i.description, "Location": i.location, "Stock": i.stock, "Unit": i.unit, "Main Stock": i.minStock }));
-        } else if (type === 'master') {
-            filename = "Master_Data.xlsx";
-            data = Object.keys(materialMaster).map(key => ({ "Part Number": key, "Model": materialMaster[key].model, "Description": materialMaster[key].description, "Unit": materialMaster[key].unit, "Main Stock": materialMaster[key].minStock }));
-        }
-        if(data.length === 0) { showToast("No data to export", true); return; }
-        const ws = XLSX.utils.json_to_sheet(data); const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Sheet1"); XLSX.writeFile(wb, filename);
-    }
-
-    function switchView(viewName) {
-        ['Dashboard','Inventory','Master'].forEach(v => { document.getElementById('view'+v).style.display = 'none'; document.getElementById('tab'+(v==='Dashboard'?'Dash':v==='Inventory'?'Inv':'Master')).classList.remove('active'); });
-        document.getElementById('view'+ (viewName==='dashboard'?'Dashboard':viewName==='inventory'?'Inventory':'Master')).style.display = 'block';
-        document.getElementById('tab'+ (viewName==='dashboard'?'Dash':viewName==='inventory'?'Inv':'Master')).classList.add('active');
-    }
+    function switchView(v) { ['Dashboard','Inventory','Master'].forEach(x => { document.getElementById('view'+x).style.display = 'none'; document.getElementById('tab'+(x==='Dashboard'?'Dash':x==='Inventory'?'Inv':'Master')).classList.remove('active'); }); document.getElementById('view'+ (v==='dashboard'?'Dashboard':v==='inventory'?'Inventory':'Master')).style.display = 'block'; document.getElementById('tab'+ (v==='dashboard'?'Dash':v==='inventory'?'Inv':'Master')).classList.add('active'); }
+    function applyFilter(f) { currentFilter = f; switchView('inventory'); renderTable(true); const tag = document.getElementById('filterTag'), text = document.getElementById('filterText'); if(f === 'all') tag.style.display = 'none'; else { tag.style.display = 'inline-flex'; text.innerText = f === 'crit' ? "Showing: Critical Stock" : "Showing: Low Stock"; } }
+    function toggleLanguage() { currentLang = currentLang === 'en' ? 'zh' : 'en'; document.querySelectorAll('[data-i18n]').forEach(el => { const k = el.getAttribute('data-i18n'); if(i18n[currentLang][k]) el.innerText = i18n[currentLang][k]; }); renderTable(); renderDashboard(); renderMasterTable(); }
+    function toggleSort(col) { sortCol === col ? sortAsc = !sortAsc : (sortCol = col, sortAsc = true); renderTable(true); }
+    function updateSortIcons() { document.querySelectorAll('.sort-icon').forEach(el => el.innerText = ''); if (sortCol && document.getElementById(`sort-${sortCol}`)) document.getElementById(`sort-${sortCol}`).innerText = sortAsc ? '▲' : '▼'; }
 
     function renderDashboard() {
         let crit = 0, low = 0, total = inventoryList.length;
-        inventoryList.forEach(item => { if(item.stock <= 0) crit++; else if(item.stock < item.minStock) low++; });
+        inventoryList.forEach(i => { if(i.stock <= 0) crit++; else if(i.stock < i.minStock) low++; });
         document.getElementById('dashCrit').innerText = crit; document.getElementById('dashLow').innerText = low; document.getElementById('dashTotal').innerText = total;
         document.querySelector('[data-i18n="card_crit"]').innerText = i18n[currentLang].card_crit.replace('(0)', `(${crit})`);
         document.getElementById('dashHistory').innerHTML = historyList.slice(0, 10).map(h => `<div style="border-bottom:1px solid #eee; padding:5px 0;"><span style="font-weight:bold;">${h.id}</span> <span style="float:right; color:${h.qty>0?'green':'red'}">${h.qty>0?'+':''}${h.qty}</span><div style="font-size:11px; color:#999;">${new Date(h.date).toLocaleDateString()} - ${h.action}</div></div>`).join('');
     }
 
-    function toggleSort(col) { sortCol === col ? sortAsc = !sortAsc : (sortCol = col, sortAsc = true); renderTable(true); }
-    function updateSortIcons() { document.querySelectorAll('.sort-icon').forEach(el => el.innerText = ''); if (sortCol && document.getElementById(`sort-${sortCol}`)) document.getElementById(`sort-${sortCol}`).innerText = sortAsc ? '▲' : '▼'; }
-
     function renderTable(resetPage = false) {
-        if(resetPage) curPageInv = 1;
-        const tbody = document.getElementById('inventoryBody'); const term = document.getElementById('searchInv').value.toLowerCase();
-        tbody.innerHTML = '';
-        
-        let filteredList = inventoryList.filter(item => {
-            const matchSearch = (item.id + item.model + item.description).toLowerCase().includes(term);
-            let matchStatus = true;
-            if(currentFilter === 'crit') matchStatus = (item.stock <= 0); else if (currentFilter === 'low') matchStatus = (item.stock > 0 && item.stock < item.minStock);
-            return matchSearch && matchStatus;
-        });
-
-        if (sortCol) filteredList.sort((a, b) => { let vA = a[sortCol], vB = b[sortCol]; if(typeof vA === 'number') return sortAsc ? vA - vB : vB - vA; vA = String(vA).toLowerCase(); vB = String(vB).toLowerCase(); return vA < vB ? (sortAsc?-1:1) : vA > vB ? (sortAsc?1:-1) : 0; });
+        if(resetPage) curPageInv = 1; const tbody = document.getElementById('inventoryBody'), term = document.getElementById('searchInv').value.toLowerCase(); tbody.innerHTML = '';
+        let list = inventoryList.filter(i => { const mSearch = (i.id + i.model + i.description).toLowerCase().includes(term); let mStat = true; if(currentFilter === 'crit') mStat = (i.stock <= 0); else if (currentFilter === 'low') mStat = (i.stock > 0 && i.stock < i.minStock); return mSearch && mStat; });
+        if (sortCol) list.sort((a, b) => { let vA = a[sortCol], vB = b[sortCol]; if(typeof vA === 'number') return sortAsc ? vA - vB : vB - vA; vA = String(vA).toLowerCase(); vB = String(vB).toLowerCase(); return vA < vB ? (sortAsc?-1:1) : vA > vB ? (sortAsc?1:-1) : 0; });
         updateSortIcons();
-
-        const totalPages = Math.ceil(filteredList.length / pageSize) || 1; if(curPageInv > totalPages) curPageInv = totalPages || 1;
-        filteredList.slice((curPageInv - 1) * pageSize, curPageInv * pageSize).forEach((item) => {
-            let statusClass = item.stock <= 0 ? 'status-crit' : item.stock < item.minStock ? 'status-low' : 'status-ok'; 
-            const tr = document.createElement('tr'); tr.onclick = () => openDetailsObj(item);
-            tr.innerHTML = `<td class="col-status"><span class="status-dot ${statusClass}"></span></td><td class="col-pn"><div style="font-size:14px;">${item.id}</div><div class="mobile-info"><div class="mobile-model">${item.model}</div><div class="mobile-desc">${item.description}</div></div></td><td class="col-model desktop-only">${item.model}</td><td class="col-desc desktop-only" style="color:#666; font-size:13px;">${item.description}</td><td class="col-loc"><span>${item.location||'-'}</span></td><td class="col-stock">${item.stock}</td><td class="col-unit desktop-only" style="color:#666; font-size:12px;">${item.unit}</td><td class="col-action" style="text-align:center;"><span style="color:#0a6ed1; font-weight:bold; font-size:12px;">${i18n[currentLang].txt_display}</span></td>`;
+        const total = Math.ceil(list.length / pageSize) || 1; if(curPageInv > total) curPageInv = total || 1;
+        list.slice((curPageInv - 1) * pageSize, curPageInv * pageSize).forEach((i) => {
+            const tr = document.createElement('tr'); tr.onclick = () => openDetailsObj(i);
+            tr.innerHTML = `<td class="col-status"><span class="status-dot ${i.stock <= 0 ? 'status-crit' : i.stock < i.minStock ? 'status-low' : 'status-ok'}"></span></td><td class="col-pn"><div style="font-size:14px;">${i.id}</div><div class="mobile-info"><div class="mobile-model">${i.model}</div><div class="mobile-desc">${i.description}</div></div></td><td class="col-model desktop-only">${i.model}</td><td class="col-desc desktop-only" style="color:#666; font-size:13px;">${i.description}</td><td class="col-loc"><span>${i.location||'-'}</span></td><td class="col-stock">${i.stock}</td><td class="col-unit desktop-only" style="color:#666; font-size:12px;">${i.unit}</td><td class="col-action" style="text-align:center;"><span style="color:#0a6ed1; font-weight:bold; font-size:12px;">${i18n[currentLang].txt_display}</span></td>`;
             tbody.appendChild(tr);
         });
-        updatePagination('invPagination', curPageInv, totalPages, filteredList.length, 'changePage');
+        updatePagination('invPagination', curPageInv, total, list.length, 'changePage');
+    }
+
+    function renderMasterTable(resetPage = false) {
+        if(resetPage) curPageMaster = 1; const tbody = document.getElementById('masterBody'), term = document.getElementById('searchMaster').value.toLowerCase(); tbody.innerHTML = '';
+        const list = Object.keys(materialMaster).map(k => ({ id: k, ...materialMaster[k] })).filter(i => (i.id+i.model+i.description).toLowerCase().includes(term));
+        const total = Math.ceil(list.length / pageSize) || 1; if(curPageMaster > total) curPageMaster = total;
+        list.slice((curPageMaster - 1) * pageSize, curPageMaster * pageSize).forEach((i) => {
+            const tr = document.createElement('tr'); tr.onclick = () => { openDetailsObj(inventoryList.find(x => x.id === i.id) || { ...i, stock: 0 }); };
+            tr.innerHTML = `<td class="col-pn"><div style="font-size:14px;">${i.id}</div><div class="mobile-info"><div class="mobile-model">${i.model}</div><div class="mobile-desc">${i.description}</div></div></td><td class="col-model desktop-only">${i.model}</td><td class="col-desc desktop-only" style="color:#666; font-size:13px;">${i.description}</td><td class="col-unit">${i.unit}</td><td class="col-stock desktop-only">${i.minStock}</td><td class="col-action" id="action-${i.id}"></td>`;
+            tbody.appendChild(tr);
+            const td = document.getElementById(`action-${i.id}`);
+            const btnDisp = document.createElement('span'); btnDisp.innerText = i18n[currentLang].txt_display; btnDisp.style.cssText = 'color:#0a6ed1; font-weight:bold; font-size:12px; cursor:pointer; margin-right:8px;'; btnDisp.onclick = (e) => { e.stopPropagation(); tr.onclick(); }; td.appendChild(btnDisp);
+            const btnDel = document.createElement('span'); btnDel.className = 'btn-delete'; btnDel.innerText = '✕';
+            btnDel.onclick = (e) => {
+                e.stopPropagation(); const stk = (inventoryList.find(x => x.id === i.id) || {}).stock || 0;
+                if (stk > 0) { showMsg(currentLang === 'zh' ? "無法刪除" : "Cannot Delete", currentLang === 'zh' ? `料號 ${i.id} 尚有庫存 (${stk})。` : `Part ${i.id} still has stock.`); return; }
+                const f = document.querySelector('#msgModal .dialog-footer'), o = f.innerHTML;
+                document.getElementById('msgTitle').innerText = currentLang === 'zh' ? "刪除確認" : "Delete Confirmation"; document.getElementById('msgContent').innerText = currentLang === 'zh' ? "確定要刪除此物料主檔嗎？" : "Delete this master data permanently?";
+                f.innerHTML = `<button class="std-btn btn-transparent" id="msgCancel">${currentLang==='zh'?'取消':'Cancel'}</button><button class="std-btn btn-primary" id="msgConfirm">${currentLang==='zh'?'刪除':'Delete'}</button>`;
+                document.getElementById('msgCancel').onclick = () => { closeModal('msgModal'); setTimeout(() => f.innerHTML = o, 300); };
+                document.getElementById('msgConfirm').onclick = () => { closeModal('msgModal'); deleteMaster(i.id); setTimeout(() => f.innerHTML = o, 300); };
+                openModal('msgModal');
+            }; td.appendChild(btnDel);
+        });
+        updatePagination('masterPagination', curPageMaster, total, list.length, 'changeMasterPage');
     }
 
     function updatePagination(eid, cur, tot, len, func) { document.getElementById(eid).innerHTML = `<button class="btn-page" onclick="${func}(-1)" ${cur === 1 ? 'disabled' : ''}>◀</button><span class="page-info">${i18n[currentLang].txt_page} ${cur} ${i18n[currentLang].txt_of} ${tot} (${len})</span><button class="btn-page" onclick="${func}(1)" ${cur === tot || tot === 0 ? 'disabled' : ''}>▶</button>`; }
     function changePage(delta) { curPageInv += delta; renderTable(false); }
     function changeMasterPage(delta) { curPageMaster += delta; renderMasterTable(false); }
 
-    function renderMasterTable(resetPage = false) {
-        if(resetPage) curPageMaster = 1;
-        const tbody = document.getElementById('masterBody'); const term = document.getElementById('searchMaster').value.toLowerCase(); tbody.innerHTML = '';
-        const masterArr = Object.keys(materialMaster).map(k => ({ id: k, ...materialMaster[k] })).filter(i => (i.id+i.model+i.description).toLowerCase().includes(term));
-        const totalPages = Math.ceil(masterArr.length / pageSize) || 1; if(curPageMaster > totalPages) curPageMaster = totalPages;
-
-        masterArr.slice((curPageMaster - 1) * pageSize, curPageMaster * pageSize).forEach((item) => {
-            const tr = document.createElement('tr'); tr.onclick = () => { let invItem = inventoryList.find(i => i.id === item.id); openDetailsObj(invItem || { ...item, stock: 0 }); };
-            tr.innerHTML = `<td class="col-pn"><div style="font-size:14px;">${item.id}</div><div class="mobile-info"><div class="mobile-model">${item.model}</div><div class="mobile-desc">${item.description}</div></div></td><td class="col-model desktop-only">${item.model}</td><td class="col-desc desktop-only" style="color:#666; font-size:13px;">${item.description}</td><td class="col-unit">${item.unit}</td><td class="col-stock desktop-only">${item.minStock}</td><td class="col-action" id="action-${item.id}"></td>`;
-            tbody.appendChild(tr);
-
-            const td = document.getElementById(`action-${item.id}`);
-            const btnDisp = document.createElement('span'); btnDisp.innerText = i18n[currentLang].txt_display; btnDisp.style.cssText = 'color:#0a6ed1; font-weight:bold; font-size:12px; cursor:pointer;'; btnDisp.onclick = (e) => { e.stopPropagation(); tr.onclick(); }; td.appendChild(btnDisp);
-            const btnDel = document.createElement('span'); btnDel.className = 'btn-delete'; btnDel.innerText = '✕';
-            btnDel.onclick = (e) => {
-                e.stopPropagation(); const stk = (inventoryList.find(i => i.id === item.id) || {}).stock || 0;
-                if (stk > 0) { showMsg(currentLang === 'zh' ? "無法刪除" : "Cannot Delete", currentLang === 'zh' ? `料號 ${item.id} 尚有庫存 (${stk})。` : `Part ${item.id} still has stock.`); return; }
-                const f = document.querySelector('#msgModal .dialog-footer'); const o = f.innerHTML;
-                document.getElementById('msgTitle').innerText = currentLang === 'zh' ? "刪除確認" : "Delete Confirmation"; document.getElementById('msgContent').innerText = currentLang === 'zh' ? "確定要刪除此物料主檔嗎？" : "Delete this master data permanently?";
-                f.innerHTML = `<button class="std-btn btn-transparent" id="msgCancel">${currentLang==='zh'?'取消':'Cancel'}</button><button class="std-btn btn-primary" id="msgConfirm">${currentLang==='zh'?'刪除':'Delete'}</button>`;
-                document.getElementById('msgCancel').onclick = () => { closeModal('msgModal'); setTimeout(() => f.innerHTML = o, 300); };
-                document.getElementById('msgConfirm').onclick = () => { closeModal('msgModal'); deleteMaster(item.id); setTimeout(() => f.innerHTML = o, 300); };
-                openModal('msgModal');
-            }; td.appendChild(btnDel);
-        });
-        updatePagination('masterPagination', curPageMaster, totalPages, masterArr.length, 'changeMasterPage');
-    }
-
-    function openDetailsObj(item) {
-        document.getElementById('detId').innerText = item.id; document.getElementById('detModel').innerText = item.model; document.getElementById('detDesc').innerText = item.description; document.getElementById('detStock').innerText = item.stock; document.getElementById('detLoc').innerText = item.location || "None";
-        const hList = historyList.filter(h => h.id === item.id);
+    function openDetailsObj(i) {
+        document.getElementById('detId').innerText = i.id; document.getElementById('detModel').innerText = i.model; document.getElementById('detDesc').innerText = i.description; document.getElementById('detStock').innerText = i.stock; document.getElementById('detLoc').innerText = i.location || "None";
+        const hList = historyList.filter(h => h.id === i.id);
         document.getElementById('detHistory').innerHTML = hList.length ? hList.map(h => `<div style="border-bottom:1px solid #eee; padding:8px 0;"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;"><span style="font-weight:600; font-size:13px; color:#333;">${h.action} <span style="color:${h.qty > 0 ? '#107e3e' : '#bb0000'}">(${h.qty > 0 ? '+' : ''}${h.qty})</span></span><span style="font-size:11px; color:#888;">${new Date(h.date).toLocaleDateString()}</span></div><div style="display:flex; justify-content:space-between; font-size:12px; color:#666;"><span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:180px;">📄 ${h.ref || '-'}</span><span>👤 ${h.user}</span></div></div>`).join('') : '<div style="text-align:center; padding:10px; color:#999;">No History</div>';
         openModal('detailsModal');
     }
 
-    function openTxModal(type) {
-        currentTxType = type;
-        document.getElementById('txTitle').innerText = type === 'receive' ? i18n[currentLang].btn_po : i18n[currentLang].btn_issue;
-        document.getElementById('txDate').value = new Date().toISOString().split('T')[0]; document.getElementById('txUser').value = currentUserDisplayName; document.getElementById('txRef').value = ""; document.getElementById('txBody').innerHTML = "";
-        addTxRow(); openModal('txModal');
-    }
-
-    function addTxRow() {
-        const tr = document.createElement('tr'), isIss = currentTxType === 'issue';
-        tr.innerHTML = `<td><input type="text" class="tx-input tx-id" onchange="resolvePart(this)"></td><td><input type="text" class="tx-input tx-info" readonly tabindex="-1"></td><td><input type="number" class="tx-input tx-qty"></td><td><input type="text" class="tx-input tx-loc" ${isIss?'readonly tabindex="-1"':''} style="${isIss?'background-color:#f5f5f5; color:#666;':''}"></td><td style="text-align:center; cursor:pointer; color:#ccc;" onclick="this.parentElement.remove()">✕</td>`;
-        document.getElementById('txBody').appendChild(tr);
-    }
-
-    function resolvePart(input) {
-        const id = input.value.trim(), row = input.parentElement.parentElement; row.querySelector('.tx-info').value = ""; row.querySelector('.tx-loc').value = ""; if (!id) return;
-        let invItem = inventoryList.find(i => i.id === id), mat = materialMaster[id];
-        if (currentTxType === 'receive') {
-            if (!mat) { showMsg(i18n[currentLang].msg_unknown_title, i18n[currentLang].msg_unknown_body); input.value = ""; return; }
-            row.querySelector('.tx-info').value = mat.description || mat.model; if (invItem) row.querySelector('.tx-loc').value = invItem.location || "";
-        } else if (invItem) { row.querySelector('.tx-info').value = invItem.description || invItem.model; row.querySelector('.tx-loc').value = invItem.location || ""; }
-    }
+    // -------------------------
+    // 5. 異動單邏輯 (Tx)
+    // -------------------------
+    function openTxModal(type) { currentTxType = type; document.getElementById('txTitle').innerText = type === 'receive' ? i18n[currentLang].btn_po : i18n[currentLang].btn_issue; document.getElementById('txDate').value = new Date().toISOString().split('T')[0]; document.getElementById('txUser').value = currentUserDisplayName; document.getElementById('txRef').value = ""; document.getElementById('txBody').innerHTML = ""; addTxRow(); openModal('txModal'); }
+    function addTxRow() { const tr = document.createElement('tr'), isIss = currentTxType === 'issue'; tr.innerHTML = `<td><input type="text" class="tx-input tx-id" onchange="resolvePart(this)"></td><td><input type="text" class="tx-input tx-info" readonly tabindex="-1"></td><td><input type="number" class="tx-input tx-qty"></td><td><input type="text" class="tx-input tx-loc" ${isIss?'readonly tabindex="-1"':''} style="${isIss?'background-color:#f5f5f5; color:#666;':''}"></td><td style="text-align:center; cursor:pointer; color:#ccc;" onclick="this.parentElement.remove()">✕</td>`; document.getElementById('txBody').appendChild(tr); }
+    function resolvePart(input) { const id = input.value.trim(), row = input.parentElement.parentElement; row.querySelector('.tx-info').value = ""; row.querySelector('.tx-loc').value = ""; if (!id) return; let invItem = inventoryList.find(i => i.id === id), mat = materialMaster[id]; if (currentTxType === 'receive') { if (!mat) { showMsg(i18n[currentLang].msg_unknown_title, i18n[currentLang].msg_unknown_body); input.value = ""; return; } row.querySelector('.tx-info').value = mat.description || mat.model; if (invItem) row.querySelector('.tx-loc').value = invItem.location || ""; } else if (invItem) { row.querySelector('.tx-info').value = invItem.description || invItem.model; row.querySelector('.tx-loc').value = invItem.location || ""; } }
 
     function submitTx() {
-        const lang = i18n[currentLang], ref = document.getElementById('txRef').value.trim(), user = document.getElementById('txUser').value.trim(); 
+        const lang = i18n[currentLang], ref = document.getElementById('txRef').value.trim(), user = document.getElementById('txUser').value.trim(), rows = document.querySelectorAll('#txBody tr'), items = [];
         if (!ref || !user) { showMsg(lang.msg_input_required, lang.msg_input_empty); return; }
-        const rows = document.querySelectorAll('#txBody tr'), items = [];
         for (let i = 0; i < rows.length; i++) {
             const id = rows[i].querySelector('.tx-id').value.trim(), qty = Number(rows[i].querySelector('.tx-qty').value.trim()), loc = rows[i].querySelector('.tx-loc').value.trim();
             if (!id || isNaN(qty) || qty <= 0) { showMsg(lang.msg_input_required, `Row ${i + 1} invalid`); return; }
             if (currentTxType === 'receive' && !loc) { showMsg(lang.msg_input_required, `Row ${i + 1} needs Location`); return; }
-            if (currentTxType === 'issue') { const inv = inventoryList.find(item => item.id === id); if (!inv || qty > inv.stock) { showMsg(lang.error_title, `Part ${id} insufficient stock!`); return; } }
             items.push({ id, qty, loc });
         }
         document.getElementById('msgTitle').innerText = lang.confirm_post_title; document.getElementById('msgContent').innerText = lang.confirm_post_body;
         document.querySelector('#msgModal .btn-primary').onclick = function() { closeModal('msgModal'); executeSubmit(items); }; openModal('msgModal');
     }
 
-    async function executeSubmit(items) {
-        const ref = document.getElementById('txRef').value, displayUser = document.getElementById('txUser').value;
-        if(items.length === 0) return; setLoading(true);
-        try {
-            for(let item of items) {
-                let invItem = inventoryList.find(i => i.id === item.id);
-                if (currentTxType === 'receive') {
-                    if (invItem) { 
-                        invItem.stock += item.qty; 
-                        if(item.loc) invItem.location = item.loc; 
-                    } else { 
-                        const m = materialMaster[item.id]; 
-                        inventoryList.push({ id: item.id, stock: item.qty, location: item.loc, model: m.model, description: m.description, minStock: m.minStock, unit: m.unit }); 
-                        invItem = inventoryList[inventoryList.length-1]; 
-                    }
-                } else if (invItem) invItem.stock -= item.qty;
-                
-                historyList.unshift({ date: new Date().toISOString(), ref: ref, action: currentTxType === 'receive' ? 'GR (In)' : 'GI (Out)', id: item.id, qty: currentTxType === 'receive' ? item.qty : -item.qty, user: displayUser });
-                
-                await supaClient.from('inventory').upsert({ 
-                    part_number: item.id, 
-                    model: invItem.model,
-                    description: invItem.description,
-                    stock: invItem.stock, 
-                    unit: invItem.unit,
-                    main_stock: invItem.minStock,
-                    location: invItem.location,
-                    department: currentUserDept
-                });
-                
-                await supaClient.from('history').insert([{ 
-                    reference: ref, 
-                    action: currentTxType === 'receive' ? 'GR (In)' : 'GI (Out)', 
-                    part_number: item.id, 
-                    quantity: currentTxType === 'receive' ? item.qty : -item.qty, 
-                    operator_user: displayUser,
-                    note: ''
-                }]);
-            }
-            renderTable(); renderDashboard(); closeModal('txModal'); showToast("Transaction Posted!");
-        } catch(e) { showMsg("Error", "Sync Failed: " + e.message); } finally { setLoading(false); }
-    }
-
+    // -------------------------
+    // 6. 其他報表與輔助功能
+    // -------------------------
     async function deleteMaster(id) {
-        setLoading(true);
-        const { error } = await supaClient.from('master').delete().eq('part_number', id);
-        setLoading(false);
-        if(!error) { 
-            delete materialMaster[id]; 
-            inventoryList = inventoryList.filter(i => i.id !== id); 
-            renderMasterTable(); 
-            showToast(i18n[currentLang].deleted); 
-        } else {
-            showMsg("Error", error.message);
-        }
+        setLoading(true); const { error } = await supaClient.from('master').delete().eq('part_number', id); setLoading(false);
+        if(!error) { delete materialMaster[id]; inventoryList = inventoryList.filter(i => i.id !== id); renderMasterTable(); showToast(i18n[currentLang].deleted); } else showMsg("Error", error.message);
     }
 
     function openCreateMasterModal() { ['newId','newModel','newDesc','newUnit'].forEach(id => document.getElementById(id).value = ""); document.getElementById('newMinStock').value = 0; document.getElementById('newDept').value = sessionStorage.getItem('wms_dept') || "Pending"; document.getElementById('newUser').value = currentUserDisplayName; openModal('createModal'); }
     function checkMasterExists() { const id = document.getElementById('newId').value.trim(), fb = document.getElementById('masterFeedback'); if(inventoryList.find(i => i.id === id) || materialMaster[id]) { fb.innerText = "⚠️ Exists"; fb.style.color = "red"; } else { fb.innerText = "✅ Available"; fb.style.color = "green"; } }
-
+    
     async function submitCreateMaster() {
         const id = document.getElementById('newId').value.trim(), model = document.getElementById('newModel').value, desc = document.getElementById('newDesc').value, unit = document.getElementById('newUnit').value, min = document.getElementById('newMinStock').value, dept = document.getElementById('newDept').value;
-        if(!id) { showToast("ID Required", true); return; }
-        setLoading(true);
-        
-        const { error } = await supaClient.from('master').insert([{ 
-            part_number: id, 
-            model: model, 
-            description: desc, 
-            unit: unit, 
-            main_stock: min,
-            department: dept
-        }]);
-        
-        setLoading(false);
-        if(!error) { 
-            materialMaster[id] = { model, description: desc, unit, minStock: min }; 
-            renderMasterTable(); 
-            closeModal('createModal'); 
-            showToast("Created!"); 
-        } else {
-            showMsg("Error", error.message);
-        }
+        if(!id) { showToast("ID Required", true); return; } setLoading(true);
+        const { error } = await supaClient.from('master').insert([{ part_number: id, model, description: desc, unit, main_stock: min, department: dept }]); setLoading(false);
+        if(!error) { materialMaster[id] = { model, description: desc, unit, minStock: min }; renderMasterTable(); closeModal('createModal'); showToast("Created!"); } else showMsg("Error", error.message);
     }
 
-    function toggleLanguage() { currentLang = currentLang === 'en' ? 'zh' : 'en'; document.querySelectorAll('[data-i18n]').forEach(el => { const key = el.getAttribute('data-i18n'); if(i18n[currentLang][key]) el.innerText = i18n[currentLang][key]; }); renderTable(); renderDashboard(); renderMasterTable(); }
-    function openModal(id) { document.getElementById(id).style.display = 'flex'; }
-    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
-    function setLoading(b) { document.getElementById('loading').style.display = b?'block':'none'; document.querySelector('.table-container').style.opacity = b?0.5:1; }
-    function showToast(msg, err) { const t = document.getElementById('toast'); t.innerText = msg; t.style.background = err ? "#bb0000" : "#32363a"; t.style.opacity = 1; setTimeout(()=>t.style.opacity=0, 3000); }
+    function openReportModal() { const now = new Date(), y = now.getFullYear(), m = String(now.getMonth() + 1).padStart(2, '0'), d = String(now.getDate()).padStart(2, '0'); document.getElementById('rptStart').value = `${y}-${m}-01`; document.getElementById('rptEnd').value = `${y}-${m}-${d}`; openModal('reportModal'); }
     
-    checkAutoLogin();
+    async function downloadReport() {
+        const start = document.getElementById('rptStart').value, end = document.getElementById('rptEnd').value; if(!start || !end) { showToast("Select dates!", true); return; } setLoading(true);
+        const endDay = new Date(end); endDay.setDate(endDay.getDate() + 1);
+        const { data, error } = await supaClient.from('history').select('timestamp, reference, action, part_number, quantity, operator_user, note').gte('timestamp', start).lt('timestamp', endDay.toISOString());
+        setLoading(false);
+        if(error) showMsg("Error", error.message); else if(!data || data.length === 0) showMsg("No Data", "No movements found."); else { const ws = XLSX.utils.json_to_sheet(data); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Report"); XLSX.writeFile(wb, `Report_${start}_to_${end}.xlsx`); closeModal('reportModal'); }
+    }
+
+    function exportToExcel(type) {
+        let data = [], filename = "";
+        if (type === 'inventory') { filename = "Inventory_List.xlsx"; data = inventoryList.map(i => ({ "Part Number": i.id, "Model": i.model, "Description": i.description, "Location": i.location, "Stock": i.stock, "Unit": i.unit, "Main Stock": i.minStock })); } 
+        else if (type === 'master') { filename = "Master_Data.xlsx"; data = Object.keys(materialMaster).map(k => ({ "Part Number": k, "Model": materialMaster[k].model, "Description": materialMaster[k].description, "Unit": materialMaster[k].unit, "Main Stock": materialMaster[k].minStock })); }
+        if(data.length === 0) { showToast("No data to export", true); return; }
+        const ws = XLSX.utils.json_to_sheet(data), wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Sheet1"); XLSX.writeFile(wb, filename);
+    }
 </script>
 </body>
 </html>
