@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>WMS</title>
+    
+    <link rel="apple-touch-icon" href="https://placehold.co/180x180/354a5f/ffffff.png?text=WMS&font=roboto">
+    <link rel="icon" href="https://placehold.co/192x192/354a5f/ffffff.png?text=WMS&font=roboto">
+    
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <style>
+        /* --- CSS 樣式完全保留 --- */
+        :root {
+            --sap-shell-color: #354a5f; --sap-bg-color: #edf0f4; --sap-surface-color: #ffffff;
+            --sap-text-color: #32363a; --sap-border-color: #d9d9d9;
+            --sap-primary: #0a6ed1; --sap-success: #107e3e; --sap-critical: #bb0000; --sap-warning: #e9730c;
+            --sap-font-family: "72", "Arial", "Helvetica", sans-serif;
+        }
+        body { margin: 0; padding: 0; font-family: var(--sap-font-family); background-color: var(--sap-bg-color); color: var(--sap-text-color); font-size: 16px; line-height: 1.4; }
+        .shell-bar { background-color: var(--sap-shell-color); height: 44px; display: flex; justify-content: space-between; align-items: center; padding: 0 1rem; color: white; box-shadow: 0 4px 5px rgba(0,0,0,0.05); position: sticky; top: 0; z-index: 100; }
+        .shell-logo { font-weight: bold; font-size: 1rem; letter-spacing: 0.5px; display: flex; align-items: center; gap: 8px;}
+        .page-header { background-color: var(--sap-surface-color); padding: 1rem 2rem; border-bottom: 1px solid var(--sap-border-color); display: flex; justify-content: space-between; align-items: center; }
+        .content-area { padding: 1rem 2rem; max-width: 100%; box-sizing: border-box; }
+        .nav-tabs { display: flex; gap: 20px; }
+        .nav-item { cursor: pointer; padding-bottom: 5px; color: #6a6d70; font-weight: 600; border-bottom: 3px solid transparent; transition: all 0.2s; white-space: nowrap; }
+        .nav-item:hover { color: var(--sap-primary); }
+        .nav-item.active { color: var(--sap-primary); border-bottom-color: var(--sap-primary); }
+        .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 20px; }
+        .card { background: white; padding: 20px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid var(--sap-border-color); transition: transform 0.1s, box-shadow 0.1s; cursor: pointer; }
+        .card:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        .card:active { transform: translateY(0); }
+        .card-title { font-size: 13px; color: #666; text-transform: uppercase; font-weight: bold; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        .card-value { font-size: 36px; font-weight: normal; color: var(--sap-text-color); }
+        .card-sub { font-size: 12px; color: #888; margin-top: 5px; }
+        .card.alert { border-left: 5px solid var(--sap-critical); }
+        .card.warn { border-left: 5px solid var(--sap-warning); }
+        .card.safe { border-left: 5px solid var(--sap-success); }
+        .table-container { background: var(--sap-surface-color); border: 1px solid var(--sap-border-color); border-radius: 4px; overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,0.05); margin-top: 1rem; overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; text-align: left; table-layout: auto; min-width: 100%; }
+        thead { background-color: #f7f7f7; border-bottom: 1px solid var(--sap-border-color); }
+        th { padding: 10px 16px; font-weight: normal; color: #6a6d70; font-size: 12px; text-transform: uppercase; white-space: nowrap; }
+        td { padding: 10px 16px; border-bottom: 1px solid #eeeeee; vertical-align: middle; color: var(--sap-text-color); }
+        tr:hover { background-color: #ebf5fe; cursor: pointer; }
+        .sortable { cursor: pointer; user-select: none; transition: background 0.2s; }
+        .sortable:hover { background-color: #eaeaea; color: var(--sap-primary); }
+        .sort-icon { font-size: 10px; margin-left: 5px; color: var(--sap-primary); }
+        .col-status { width: 35px; min-width: 35px; text-align: center; padding: 0 !important; }
+        .col-pn { width: 15%; min-width: 120px; font-weight: bold; color: var(--sap-primary); vertical-align: top; }
+        th.col-pn, td.col-pn { padding-left: 12px !important; }
+        .col-model { width: 25%; min-width: 150px; max-width: 300px; white-space: normal; word-wrap: break-word; line-height: 1.3; font-size: 12px; } 
+        .col-desc { width: 30%; min-width: 150px; white-space: normal; word-wrap: break-word; line-height: 1.3; font-size: 12px; } 
+        .col-loc { width: 80px; text-align: center; color: #555; white-space: nowrap; font-size: 12px; }
+        .col-stock { width: 80px; text-align: center; white-space: nowrap; font-size: 12px; }
+        .col-unit { width: 60px; text-align: center; white-space: nowrap; font-size: 12px; }
+        .col-action { width: 100px; text-align: center; white-space: nowrap;}
+        .col-loc span { background: #f0f0f0; padding: 2px 6px; border-radius: 4px; font-size: 12px; }
+        .toolbar { padding: 10px 0; display: flex; gap: 10px; align-items: center; flex-wrap: nowrap; width: 100%; }
+        .spacer { flex-grow: 1; }
+        .std-input { height: 36px; padding: 0 10px; border: 1px solid #89919a; border-radius: 4px; font-size: 14px; width: 100%; box-sizing: border-box; background-color: white; font-family: var(--sap-font-family); transition: border-color 0.2s; }
+        .std-input:focus { outline: none; border-color: var(--sap-primary); box-shadow: 0 0 0 1px var(--sap-primary) inset; }
+        .std-input:disabled, .std-input:read-only { background-color: #f5f5f5; border-color: #d9d9d9; color: #666; cursor: default; }
+        .std-btn { height: 36px; padding: 0 16px; border-radius: 4px; font-weight: 700; cursor: pointer; font-size: 13px; font-family: var(--sap-font-family); display: inline-flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.1s; border: 1px solid transparent; white-space: nowrap; }
+        .std-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        .btn-po { background-color: var(--sap-primary); color: white; border-color: var(--sap-primary); }
+        .btn-issue { background-color: var(--sap-critical); color: white; border-color: var(--sap-critical); } .btn-issue:hover { opacity: 0.9; }
+        .btn-master { background-color: transparent; color: var(--sap-primary); border: 1px solid var(--sap-primary); }
+        .btn-primary { background-color: var(--sap-primary); color: white; }
+        .btn-transparent { background: transparent; color: var(--sap-primary); }
+        .btn-excel { background-color: #107e3e; color: white; border-color: #107e3e; } .btn-excel:hover { opacity: 0.9; }
+        .btn-delete { color: #bb0000; font-weight: bold; cursor: pointer; padding: 4px 8px; border-radius: 4px; border: 1px solid transparent; margin-left: 5px; font-size: 12px; }
+        .btn-delete:hover { background-color: #ffe6e6; border-color: #bb0000; }
+        .status-dot { height: 10px; width: 10px; border-radius: 50%; display: inline-block; vertical-align: middle; }
+        .status-ok { background-color: var(--sap-success); } .status-low { background-color: var(--sap-warning); } .status-crit { background-color: var(--sap-critical); }
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); display: none; justify-content: center; align-items: center; z-index: 1000; }
+        .std-dialog { background: white; width: 500px; border-radius: 6px; display: flex; flex-direction: column; animation: fadeIn 0.2s; max-height: 90vh; box-shadow: 0 0 20px rgba(0,0,0,0.15); border: 1px solid var(--sap-border-color); }
+        .std-dialog.large { width: 950px; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .dialog-header { padding: 10px 20px; border-bottom: 1px solid var(--sap-border-color); display: flex; justify-content: space-between; align-items: center; font-size: 16px; font-weight: bold; color: var(--sap-text-color); background: var(--sap-surface-color); }
+        .dialog-content { padding: 20px; overflow-y: auto; background: var(--sap-surface-color); }
+        .dialog-footer { padding: 10px 20px; border-top: 1px solid var(--sap-border-color); display: flex; justify-content: flex-end; gap: 10px; background: #fdfdfd; }
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .form-full { grid-column: span 2; }
+        .form-label { display: block; font-size: 12px; color: #6a6d70; margin-bottom: 4px; }
+        .tx-table { width: 100%; border: 1px solid var(--sap-border-color); border-radius: 4px; border-collapse: separate; border-spacing: 0; margin-bottom: 10px;}
+        .tx-table th { background: #f2f2f2; padding: 10px; font-size: 11px; border-bottom: 1px solid var(--sap-border-color); text-transform: uppercase; color: #666; font-weight: bold; }
+        .tx-table td { padding: 6px 8px; border-bottom: 1px solid var(--sap-border-color); background: #fff; vertical-align: top; }
+        .tx-input { width: 100%; padding: 6px 8px; border: 1px solid #89919a; border-radius: 4px; background: #fff; font-family: inherit; font-size: 13px; box-sizing: border-box; transition: border-color 0.2s; }
+        .tx-input:focus { outline: none; border-color: var(--sap-primary); box-shadow: 0 0 0 1px var(--sap-primary) inset; }
+        .tx-input[readonly] { background-color: #f5f5f5; border-color: #d9d9d9; color: #666; cursor: default; }
+        #loading { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 99999; text-align: center; }
+        .loading-spinner { border: 3px solid #f3f3f3; border-top: 3px solid var(--sap-primary); border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; margin: 20px auto; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #32363a; color: white; padding: 10px 20px; border-radius: 4px; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 20000; font-size: 13px; box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
+        .pagination-bar { display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; background-color: #fcfcfc; border-top: 1px solid #eee; }
+        .page-info { font-size: 12px; color: #666; font-weight: bold; }
+        .btn-page { padding: 4px 10px; font-size: 12px; border: 1px solid #d9d9d9; background: white; border-radius: 4px; cursor: pointer; color: #333; }
+        .btn-page:disabled { opacity: 0.5; cursor: default; background: #f2f2f2; }
+        .btn-page:hover:not(:disabled) { border-color: var(--sap-primary); color: var(--sap-primary); }
+        .mobile-info { display: none; }
+        #filterTag { display: none; background: #e0f0ff; color: #0a6ed1; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: bold; margin-right: 10px; align-items: center; gap: 5px; cursor: pointer; }
+        #filterTag:hover { background: #d0e8ff; }
+        @media (max-width: 992px) { 
+            .page-header { padding: 10px 15px; flex-direction: row; align-items: center; }
+            .nav-tabs { gap: 15px; overflow-x: auto; padding-bottom: 0; }
+            .nav-item { font-size: 14px; }
+            .toolbar { flex-wrap: wrap; gap: 8px; }
+            .std-btn { flex: 1 1 auto; justify-content: center; } 
+            .spacer { display: none; }
+            .toolbar input { width: 100% !important; order: 99; margin-top: 5px; }
+            .desktop-only { display: none !important; } 
+            .col-action { display: none !important; } 
+            .std-dialog, .std-dialog.large { width: 95% !important; max-height: 85vh; }
+            .dialog-header-grid { grid-template-columns: 1fr !important; gap: 10px !important; }
+            .table-container { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+            th, td { padding: 8px 4px !important; }
+            .col-status { width: 30px !important; min-width: 30px !important; } 
+            .col-loc { width: 60px !important; text-align: center !important; font-size: 12px; }
+            .col-stock { width: 60px !important; text-align: right !important; font-size: 12px; }
+            .col-unit { width: 50px !important; text-align: center !important; font-size: 12px; }
+            .col-pn { width: auto !important; } 
+            .mobile-info { display: block !important; margin-top: 6px; }
+            .mobile-model { font-size: 13px; color: #444; font-weight: 500; margin-bottom: 2px; white-space: normal; line-height: 1.3; }
+            .mobile-desc { font-size: 12px; color: #888; line-height: 1.3; white-space: normal; }
+        }
+    </style>
+</head>
+<body>
+<div id="loginOverlay" style="position:fixed; top:0; left:0; width:100%; height:100%; background:var(--sap-bg-color); z-index:9999; display:flex; justify-content:center; align-items:center;">
+    <div class="std-dialog" style="width:320px; padding:20px; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
+        <div style="text-align:center; margin-bottom:20px;">
+            <h2 style="color:var(--sap-shell-color); margin:0;">Sunlit AZ WMS</h2>
+            <p style="font-size:12px; color:#666; margin-top:5px;">Please sign in to continue</p>
+        </div>
+        <div style="display:grid; gap:15px;">
+            <input type="text" id="loginUser" class="std-input" placeholder="Username" style="width:100%;" oninput="clearLoginError()">
+            <input type="password" id="loginPass" class="std-input" placeholder="Password" style="width:100%;" oninput="clearLoginError()">
+            <div id="loginFeedback" style="color:#bb0000; font-size:13px; text-align:center; min-height:18px; font-weight:bold;"></div>
+            <button id="btnLogin" class="std-btn btn-primary" style="width:100%; justify-content:center; height:40px;" onclick="doLogin()" data-i18n="btn_signin">Sign In</button>
+            <div style="text-align:center; font-size:12px; margin-top:10px;">
+                <span style="color:#666;" data-i18n="txt_new_user">New User? </span>
+                <span style="color:var(--sap-primary); cursor:pointer; font-weight:bold;" onclick="openRegister()" data-i18n="link_register">Register Here</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="pendingOverlay" style="position:fixed; top:0; left:0; width:100%; height:100%; background:var(--sap-bg-color); z-index:9998; display:none; justify-content:center; align-items:center;">
+    <div class="std-dialog" style="width:350px; padding:30px; text-align:center;">
+        <div style="font-size:48px; margin-bottom:10px;">⏳</div>
+        <h2 style="margin:0; color:#333;">Account Pending</h2>
+        <p style="color:#666; font-size:14px; margin:15px 0 25px 0; line-height:1.5;">您的帳號目前正在審核中 (Pending Approval)。<br>請聯繫管理員為您分配部門權限。</p>
+        <button class="std-btn btn-primary" style="width:100%; justify-content:center;" onclick="doLogout()">Back to Login</button>
+    </div>
+</div>
+
+<div id="loading"><div class="loading-spinner"></div><div style="background:rgba(255,255,255,0.9); padding:5px 10px; border-radius:4px; margin-top:10px;">Loading...</div></div>
+
+<div class="shell-bar">
+    <div class="shell-logo"><span style="font-weight:bold; font-size:1.2em;">Sunlit AZ</span> WMS</div>
+    <div style="display:flex; gap:15px; align-items:center;">
+        <div id="userInfoDisplay" style="font-size:12px; color:#ddd; margin-right:10px;"></div>
+        <div id="changePassBtn" style="cursor:pointer; font-size:12px; opacity:0.9; display:none;" onclick="openChangePass()">🔑 Pwd</div>
+        <div style="cursor:pointer; font-size:12px; opacity:0.9;" onclick="toggleLanguage()">EN / 繁中</div>
+        <div id="logoutBtn" style="cursor:pointer; font-size:12px; opacity:0.9; display:none;" onclick="doLogout()">Logout ⏻</div>
+    </div>
+</div>
+
+<div class="page-header">
+    <div>
+        <div class="nav-tabs">
+            <div class="nav-item active" id="tabDash" onclick="switchView('dashboard')" data-i18n="tab_dash">Dashboard</div>
+            <div class="nav-item" id="tabInv" onclick="switchView('inventory')" data-i18n="tab_inv">Inventory</div>
+            <div class="nav-item" id="tabMaster" onclick="switchView('master')" data-i18n="tab_master">Master Data</div>
+        </div>
+        <div style="color:#6a6d70; font-size:12px; margin-top:8px;">Sunlit AZ / Spare Part Management</div>
+    </div>
+    <button class="std-btn btn-transparent" onclick="fetchData()"><span style="font-size:16px;">↻</span> <span data-i18n="btn_refresh">Refresh</span></button>
+</div>
+
+<div class="content-area">
+    <div id="viewDashboard">
+        <div class="dashboard-grid">
+            <div class="card alert" onclick="applyFilter('crit')" title="Click to filter"><div class="card-title" data-i18n="card_crit">Critical Stock</div><div class="card-value" id="dashCrit" style="color:#bb0000">0</div><div class="card-sub" data-i18n="sub_crit">Items Out of Stock</div></div>
+            <div class="card warn" onclick="applyFilter('low')" title="Click to filter"><div class="card-title" data-i18n="card_low">Low Stock</div><div class="card-value" id="dashLow" style="color:#e9730c">0</div><div class="card-sub" data-i18n="sub_low">Items below safety level</div></div>
+            <div class="card safe" onclick="applyFilter('all')" title="Show All"><div class="card-title" data-i18n="card_total">Total Items</div><div class="card-value" id="dashTotal">0</div><div class="card-sub" data-i18n="sub_total">Active SKU Count</div></div>
+            <div class="card" style="cursor: default;"><div class="card-title"><span data-i18n="card_hist">Recent Movements</span><button class="std-btn btn-transparent" style="font-size:12px; padding:2px 8px; height:auto;" onclick="openReportModal()">📊 Report</button></div><div style="font-size:12px; color:#555; max-height:100px; overflow-y:auto;" id="dashHistory"></div></div>
+        </div>
+    </div>
+
+    <div id="viewInventory" style="display:none;">
+        <div class="toolbar">
+            <button class="std-btn btn-po" onclick="openTxModal('receive')"><span data-i18n="btn_po">Goods Receipt</span></button>
+            <button class="std-btn btn-issue" onclick="openTxModal('issue')"><span data-i18n="btn_issue">Goods Issue</span></button>
+            <button class="std-btn btn-excel" onclick="exportToExcel('inventory')">📥 Excel</button>
+            <div class="spacer"></div>
+            <div id="filterTag" onclick="applyFilter('all')"><span id="filterText">Filter Active</span> <span style="font-size:14px; margin-left:2px;">✕</span></div>
+            <input type="text" id="searchInv" class="std-input" style="width:250px;" placeholder="Search Inventory..." onkeyup="renderTable(true)">
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr><th class="col-status"></th><th class="col-pn sortable" onclick="toggleSort('id')" data-i18n="col_pn">Part Number <span id="sort-id" class="sort-icon"></span></th><th class="col-model sortable desktop-only" onclick="toggleSort('model')" data-i18n="col_model">Model <span id="sort-model" class="sort-icon"></span></th><th class="col-desc sortable desktop-only" onclick="toggleSort('description')" data-i18n="col_desc">Description <span id="sort-description" class="sort-icon"></span></th><th class="col-loc sortable" onclick="toggleSort('location')" data-i18n="col_loc">Loc <span id="sort-location" class="sort-icon"></span></th><th class="col-stock sortable" onclick="toggleSort('stock')" data-i18n="col_stock">Stock <span id="sort-stock" class="sort-icon"></span></th><th class="col-unit desktop-only" data-i18n="col_unit">Unit</th><th class="col-action"></th></tr>
+                </thead>
+                <tbody id="inventoryBody"></tbody>
+            </table>
+            <div class="pagination-bar" id="invPagination"></div>
+        </div>
+    </div>
+
+    <div id="viewMaster" style="display:none;">
+        <div class="toolbar">
+            <button class="std-btn btn-master" onclick="openCreateMasterModal()"><span data-i18n="btn_create">Create Material</span></button>
+            <button class="std-btn btn-excel" onclick="exportToExcel('master')">📥 Excel</button>
+            <div class="spacer"></div>
+            <input type="text" id="searchMaster" class="std-input" style="width:250px;" placeholder="Search Master Data..." onkeyup="renderMasterTable(true)">
+        </div>
+        <div class="table-container">
+            <table>
+                <thead><tr><th class="col-pn" data-i18n="col_pn">Part Number</th><th class="col-model desktop-only" data-i18n="col_model">Model</th><th class="col-desc desktop-only" data-i18n="col_desc">Description</th><th class="col-unit" data-i18n="col_unit">Base UoM</th><th class="col-stock desktop-only" data-i18n="lbl_safe">Safety Stock</th><th class="col-action"></th></tr></thead>
+                <tbody id="masterBody"></tbody>
+            </table>
+            <div class="pagination-bar" id="masterPagination"></div>
+        </div>
+    </div>
+</div>
+
+<div id="registerModal" class="modal-overlay" style="z-index: 10002;">
+    <div class="std-dialog" style="width:350px;">
+        <div class="dialog-header"><span data-i18n="modal_reg_title">Register Account</span><span style="cursor:pointer;" onclick="closeModal('registerModal')">✕</span></div>
+        <div class="dialog-content">
+            <div style="display:grid; gap:15px;">
+                <div><label class="form-label" data-i18n="lbl_account">Username</label><input type="text" id="regUser" class="std-input"></div>
+                <div><label class="form-label" data-i18n="lbl_password">Password</label><input type="password" id="regPass" class="std-input"></div>
+                <div><label class="form-label" data-i18n="lbl_name">Display Name</label><input type="text" id="regName" class="std-input"></div>
+                <div style="font-size:12px; color:#666; background:#f9f9f9; padding:10px; border-radius:4px;"><span data-i18n="msg_reg_note">Note: New accounts are set to "Pending". An admin must assign your department.</span></div>
+            </div>
+        </div>
+        <div class="dialog-footer"><button class="std-btn btn-transparent" onclick="closeModal('registerModal')" data-i18n="btn_cancel">Cancel</button><button class="std-btn btn-primary" onclick="doRegister()" data-i18n="btn_signup" id="btnDoRegister">Sign Up</button></div>
+    </div>
+</div>
+
+<div id="changePassModal" class="modal-overlay">
+    <div class="std-dialog" style="width:350px;">
+        <div class="dialog-header"><span data-i18n="modal_cp_title">Change Password</span><span style="cursor:pointer;" onclick="closeModal('changePassModal')">✕</span></div>
+        <div class="dialog-content"><div style="display:grid; gap:15px;"><div><label class="form-label" data-i18n="lbl_old_pass">Old Password</label><input type="password" id="cpOld" class="std-input"></div><div><label class="form-label" data-i18n="lbl_new_pass">New Password</label><input type="password" id="cpNew" class="std-input"></div><div><label class="form-label" data-i18n="lbl_confirm_pass">Confirm New</label><input type="password" id="cpConfirm" class="std-input"></div></div></div>
+        <div class="dialog-footer"><button class="std-btn btn-transparent" onclick="closeModal('changePassModal')" data-i18n="btn_cancel">Cancel</button><button class="std-btn btn-primary" onclick="doChangePass()" data-i18n="btn_change">Change</button></div>
+    </div>
+</div>
+
+<div id="txModal" class="modal-overlay">
+    <div class="std-dialog large">
+        <div class="dialog-header"><span id="txTitle">Post Goods Movement</span><span style="cursor:pointer;" onclick="closeModal('txModal')">✕</span></div>
+        <div class="dialog-content">
+            <div class="dialog-header-grid" style="display:grid; grid-template-columns: 2fr 1fr 1fr; gap:15px; margin-bottom:15px; padding-bottom:15px; border-bottom:1px solid #eee;">
+                <div><label class="form-label" data-i18n="lbl_ref">PO Number/Reference</label><input type="text" id="txRef" class="std-input"></div>
+                <div><label class="form-label" data-i18n="lbl_user">User</label><input type="text" id="txUser" class="std-input" disabled></div>
+                <div><label class="form-label" data-i18n="lbl_date">Date</label><input type="text" id="txDate" class="std-input" disabled style="background:#f9f9f9;"></div>
+            </div>
+            <table class="tx-table">
+                <thead><tr><th style="width:140px;" data-i18n="col_pn">Part Number</th><th style="min-width:150px;" data-i18n="col_desc">Description</th><th style="width:80px;" data-i18n="lbl_qty">Qty</th><th style="width:70px;" data-i18n="col_loc">Loc</th><th style="width:30px;"></th></tr></thead>
+                <tbody id="txBody"></tbody>
+            </table>
+            <button class="std-btn btn-transparent" style="width:100%; border:1px dashed #0a6ed1; color:#0a6ed1;" onclick="addTxRow()">+ <span data-i18n="btn_add_line">Add Line</span></button>
+        </div>
+        <div class="dialog-footer"><button class="std-btn btn-transparent" onclick="closeModal('txModal')" data-i18n="btn_cancel">Cancel</button><button class="std-btn btn-primary" id="txSubmitBtn" onclick="submitTx()" data-i18n="btn_post">Post</button></div>
+    </div>
+</div>
+
+<div id="createModal" class="modal-overlay">
+    <div class="std-dialog">
+        <div class="dialog-header"><span data-i18n="btn_create">Create Material</span><span style="cursor:pointer;" onclick="closeModal('createModal')">✕</span></div>
+        <div class="dialog-content">
+            <div class="form-grid">
+                <div class="form-full"><label class="form-label" data-i18n="col_pn">Part Number</label><input type="text" id="newId" class="std-input" onchange="checkMasterExists()"><div id="masterFeedback" style="font-size:11px;"></div></div>
+                <div class="form-full"><label class="form-label" data-i18n="col_model">Model</label><input type="text" id="newModel" class="std-input"></div>
+                <div class="form-full"><label class="form-label" data-i18n="col_desc">Description</label><input type="text" id="newDesc" class="std-input"></div>
+                <div><label class="form-label" data-i18n="col_unit">Base UoM</label><input type="text" id="newUnit" class="std-input"></div>
+                <div><label class="form-label" data-i18n="lbl_safe">Safety Stock</label><input type="number" id="newMinStock" class="std-input" value="0"></div>
+                <div><label class="form-label">Department</label><input type="text" id="newDept" class="std-input" readonly disabled style="background:#f5f5f5; color:#666;"></div>
+                <div><label class="form-label" data-i18n="lbl_user">User</label><input type="text" id="newUser" class="std-input"></div>
+            </div>
+        </div>
+        <div class="dialog-footer"><button class="std-btn btn-transparent" onclick="closeModal('createModal')" data-i18n="btn_cancel">Cancel</button><button class="std-btn btn-primary" onclick="submitCreateMaster()" data-i18n="btn_save">Save</button></div>
+    </div>
+</div>
+
+<div id="reportModal" class="modal-overlay">
+    <div class="std-dialog"><div class="dialog-header"><span>Download History Report</span><span style="cursor:pointer;" onclick="closeModal('reportModal')">✕</span></div><div class="dialog-content"><div style="margin-bottom:15px;"><label class="form-label">Start Date</label><input type="date" id="rptStart" class="std-input"></div><div><label class="form-label">End Date</label><input type="date" id="rptEnd" class="std-input"></div></div><div class="dialog-footer"><button class="std-btn btn-transparent" onclick="closeModal('reportModal')">Cancel</button><button class="std-btn btn-primary" onclick="downloadReport()">📥 Download Excel</button></div></div>
+</div>
+
+<div id="detailsModal" class="modal-overlay">
+    <div class="std-dialog">
+        <div class="dialog-header"><span data-i18n="modal_detail">Details</span><span style="cursor:pointer;" onclick="closeModal('detailsModal')">✕</span></div>
+        <div class="dialog-content">
+            <div style="border-bottom:1px solid #eee; padding-bottom:15px; margin-bottom:15px;"><h2 id="detId" style="margin:0 0 5px 0; color:var(--sap-shell-color); font-family:monospace;"></h2><div id="detModel" style="color:#333; font-weight:bold; margin-bottom:5px;"></div><div id="detDesc" style="color:#666; font-size:0.95em;"></div></div>
+            <div style="background:#f8f9fa; padding:15px; border-radius:4px; border:1px solid #eee; display:flex; justify-content:space-between; align-items:center;"><div><div style="font-size:11px; color:#666;" data-i18n="col_stock">STOCK</div><div id="detStock" style="font-size:32px; font-weight:normal;">0</div></div><div style="text-align:right;"><div style="font-size:11px; color:#666;" data-i18n="col_loc">LOCATION</div><div id="detLoc" style="font-size:18px; font-weight:bold; background:#e0e0e0; padding:2px 8px; border-radius:4px;">-</div></div></div>
+            <div style="font-size:12px; font-weight:bold; color:#6a6d70; margin-top:20px; margin-bottom:5px;" data-i18n="card_hist">HISTORY</div><div id="detHistory" style="border:1px solid #eee; border-radius:4px; max-height:200px; overflow-y:auto; font-size:12px; padding:10px;"></div>
+        </div>
+        <div class="dialog-footer"><button class="std-btn btn-transparent" onclick="closeModal('detailsModal')" data-i18n="btn_close">Close</button></div>
+    </div>
+</div>
+
+<div id="msgModal" class="modal-overlay" style="z-index: 10003;">
+    <div class="std-dialog" style="width: 400px; max-width: 90%;"><div class="dialog-header"><span id="msgTitle" style="color: var(--sap-critical);">System Message</span></div><div class="dialog-content" id="msgContent" style="padding: 20px; font-size: 14px; white-space: pre-wrap; color: #333;"></div><div class="dialog-footer"><button class="std-btn btn-primary" onclick="closeModal('msgModal')" data-i18n="btn_ok">OK</button></div></div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+    // 🔥 請在此處填寫您的 Supabase URL 與 Anon Key
+    const supabaseUrl = 'https://gvsglqvfkgfdymcntldb.supabase.co';
+    const supabaseKey = 'sb_publishable_s5grpgB4G9GP1gF9_YIcqw_f9cz-ZB7';
+    const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+
+    let inventoryList = [];
+    let materialMaster = {};
+    let historyList = [];
+    let currentTxType = 'receive'; 
+    let currentLang = 'en';
+    let currentUserDisplayName = ""; 
+    let currentUserName = ""; 
+    let currentUserDept = "";
+
+    let curPageInv = 1;
+    let curPageMaster = 1;
+    const pageSize = 50;
+    let sortCol = '';
+    let sortAsc = true;
+    let currentFilter = 'all';
+
+    let logoutTimer;
+    const AUTO_LOGOUT_TIME = 30 * 60 * 1000; 
+
+    // 翻譯字庫
+    const i18n = {
+        en: {
+            tab_inv: "Inventory", tab_dash: "Dashboard", tab_master: "Master Data", btn_refresh: "Refresh",
+            btn_po: "Goods Receipt", btn_issue: "Goods Issue", btn_create: "Create Material",
+            col_pn: "Part Number", col_model: "Model", col_desc: "Description", col_loc: "Loc", col_stock: "Stock", col_unit: "Unit",
+            lbl_ref: "PO Number/Reference", lbl_user: "User", lbl_date: "Date", lbl_qty: "Qty", lbl_safe: "Safety Stock",
+            btn_add_line: "Add Line", btn_cancel: "Cancel", btn_post: "Post", btn_save: "Save", btn_close: "Close", btn_ok: "OK",
+            card_crit: "Critical Stock", sub_crit: "Items Out of Stock", card_low: "Low Stock", sub_low: "Below Safety Level", card_total: "Total Items", sub_total: "Active SKU Count", card_hist: "Recent Movements", modal_detail: "Details", txt_display: "Display", btn_logout: "Logout", btn_pwd: "Pwd", lbl_account: "Username", lbl_password: "Password", lbl_name: "Display Name", btn_signin: "Sign In", btn_signup: "Sign Up", btn_change: "Change", txt_new_user: "New User?", link_register: "Register Here", modal_reg_title: "Register Account", modal_cp_title: "Change Password", lbl_old_pass: "Old Password", lbl_new_pass: "New Password", lbl_confirm_pass: "Confirm New", msg_reg_success: "Register Success! Please Login.", msg_pass_changed: "Password Changed! Please login again.", msg_pass_mismatch: "Passwords do not match", msg_fill_all: "All fields required", msg_auto_logout: "Session timed out due to inactivity.", title_auto_logout: "Auto Logout", confirm_post_title: "Post Confirmation", confirm_post_body: "Are you sure you want to post these transactions?", confirm_delete: "Delete this master data?", deleted: "Deleted!", msg_input_required: "Input Required", msg_input_empty: "Please fill in PO/Reference and User field.", error_title: "Insufficient Stock", error_msg: "Cannot issue more than available stock.", txt_page: "Page", txt_of: "of", msg_reg_note: "Note: New accounts are set to 'Pending'. An admin must assign your department."
+        },
+        zh: {
+            tab_inv: "庫存列表", tab_dash: "管理看板", tab_master: "物料主檔", btn_refresh: "刷新",
+            btn_po: "收貨入庫", btn_issue: "發貨領料", btn_create: "建立物料",
+            col_pn: "料號", col_model: "型號", col_desc: "品名描述", col_loc: "儲位", col_stock: "庫存", col_unit: "單位",
+            lbl_ref: "採購單號/用途", lbl_user: "操作人員", lbl_date: "日期", lbl_qty: "數量", lbl_safe: "安全庫存",
+            btn_add_line: "新增項目", btn_cancel: "取消", btn_post: "過帳", btn_save: "儲存", btn_close: "關閉", btn_ok: "確定",
+            card_crit: "缺料警告", sub_crit: "庫存為 0", card_low: "低庫存", sub_low: "低於安全水位", card_total: "物料總數", sub_total: "系統內 SKU", card_hist: "最近異動", modal_detail: "詳細資訊", txt_display: "查看", btn_logout: "登出", btn_pwd: "密碼", lbl_account: "帳號", lbl_password: "密碼", lbl_name: "顯示名稱", btn_signin: "登入", btn_signup: "註冊", btn_change: "修改", txt_new_user: "還沒帳號?", link_register: "點此註冊", modal_reg_title: "註冊帳號", modal_cp_title: "修改密碼", lbl_old_pass: "舊密碼", lbl_new_pass: "新密碼", lbl_confirm_pass: "確認新密碼", msg_reg_success: "註冊成功！請登入。", msg_pass_changed: "密碼已修改！請重新登入。", msg_pass_mismatch: "新密碼不一致", msg_fill_all: "請填寫所有欄位", msg_auto_logout: "閒置過久，系統已自動登出。", title_auto_logout: "自動登出", confirm_post_title: "過帳確認", confirm_post_body: "您確定要提交這些異動資料嗎？", confirm_delete: "確定要刪除此物料主檔嗎？", deleted: "已刪除！", msg_input_required: "欄位必填", msg_input_empty: "請填寫單號/用途與操作人員欄位。", error_title: "庫存不足", error_msg: "領料數量不可大於現有庫存。", txt_page: "第", txt_of: "頁 / 共", msg_reg_note: "注意：新帳號預設為「待審核」，需由管理員分配部門權限。"
+        }
+    };
+
+    document.addEventListener("DOMContentLoaded", function() {
+        document.getElementById('loginUser').addEventListener('keypress', function (e) { if (e.key === 'Enter') doLogin(); });
+        document.getElementById('loginPass').addEventListener('keypress', function (e) { if (e.key === 'Enter') doLogin(); });
+        document.getElementById('regName').addEventListener('keypress', function (e) { if (e.key === 'Enter') doRegister(); });
+        document.getElementById('cpConfirm').addEventListener('keypress', function (e) { if (e.key === 'Enter') doChangePass(); });
+    });
+
+    function showMsg(title, text) {
+        document.getElementById('msgTitle').innerText = title;
+        document.getElementById('msgTitle').style.color = "var(--sap-critical)"; 
+        document.getElementById('msgContent').innerText = text;
+        const okBtn = document.querySelector('#msgModal .btn-primary');
+        okBtn.onclick = function() { closeModal('msgModal'); };
+        openModal('msgModal');
+    }
+
+    function getTrans(key) { return i18n[currentLang][key] || key; }
+
+    function checkAutoLogin() {
+        const savedUser = sessionStorage.getItem('wms_user');
+        const savedUid = sessionStorage.getItem('wms_uid');
+        const savedDept = sessionStorage.getItem('wms_dept');
+        const lastActive = sessionStorage.getItem('wms_last_active');
+
+        if (lastActive && (Date.now() - lastActive > AUTO_LOGOUT_TIME)) { doLogout(); return; }
+        if (savedUser) applyLoginState(savedUser, savedUid, savedDept);
+    }
+
+    function resetLogoutTimer() {
+        if (!sessionStorage.getItem('wms_user')) return; 
+        sessionStorage.setItem('wms_last_active', Date.now());
+        clearTimeout(logoutTimer);
+        logoutTimer = setTimeout(() => { doLogout(); }, AUTO_LOGOUT_TIME);
+    }
+
+    ['mousemove', 'keydown', 'click', 'touchstart'].forEach(evt => document.addEventListener(evt, resetLogoutTimer));
+
+    async function doLogin() {
+        const user = document.getElementById('loginUser').value.trim();
+        const pass = document.getElementById('loginPass').value.trim();
+        const feedback = document.getElementById('loginFeedback');
+        const btn = document.getElementById('btnLogin'); 
+        
+        feedback.innerText = "";
+        if(!user || !pass) { feedback.style.color = "#bb0000"; feedback.innerText = "Please enter username and password"; return; }
+        
+        btn.innerText = "Connecting..."; btn.disabled = true; setLoading(true); 
+        
+        // Supabase Login (Query 'users' table)
+        const { data, error } = await supabase.from('users').select('*').eq('username', user).eq('password', pass).single();
+        
+        setLoading(false);
+        if(data) {
+            feedback.innerText = "Success!";
+            sessionStorage.setItem('wms_user', data.name);
+            sessionStorage.setItem('wms_uid', data.username); 
+            sessionStorage.setItem('wms_dept', data.department); // 對應 DB department 欄位
+            sessionStorage.setItem('wms_last_active', Date.now()); 
+            applyLoginState(data.name, data.username, data.department);
+        } else {
+            feedback.style.color = "#bb0000";
+            feedback.innerText = "Invalid Credentials";
+            btn.innerText = getTrans('btn_signin'); btn.disabled = false;
+        }
+    }
+
+    function openRegister() { ['regUser','regPass','regName'].forEach(id => document.getElementById(id).value = ""); openModal('registerModal'); }
+
+    async function doRegister() {
+        const u = document.getElementById('regUser').value.trim();
+        const p = document.getElementById('regPass').value.trim();
+        const n = document.getElementById('regName').value.trim();
+        const btn = document.getElementById('btnDoRegister');
+        
+        if(!u || !p || !n) { showToast(getTrans('msg_fill_all'), true); return; }
+        btn.disabled = true; btn.innerText = "Processing..."; setLoading(true);
+        
+        // Supabase Insert to 'users' table
+        const { error } = await supabase.from('users').insert([{ username: u, password: p, name: n, department: 'Pending' }]);
+        
+        setLoading(false); btn.disabled = false; btn.innerText = getTrans('btn_signup');
+        if(!error) {
+            closeModal('registerModal');
+            showMsg("Registration Sent", currentLang === 'en' ? "Registration sent! Your account is 'Pending'." : "申請已送出！您的帳號目前為 '待審核' 狀態。");
+        } else { showMsg("Error", error.message); }
+    }
+
+    function openChangePass() { ['cpOld','cpNew','cpConfirm'].forEach(id => document.getElementById(id).value = ""); openModal('changePassModal'); }
+
+    async function doChangePass() {
+        const oldP = document.getElementById('cpOld').value.trim();
+        const newP = document.getElementById('cpNew').value.trim();
+        const confP = document.getElementById('cpConfirm').value.trim();
+        
+        if(!oldP || !newP) { showToast(getTrans('msg_fill_all'), true); return; }
+        if(newP !== confP) { showToast(getTrans('msg_pass_mismatch'), true); return; }
+        
+        setLoading(true);
+        const { data } = await supabase.from('users').select('password').eq('username', currentUserName).single();
+        if(data && data.password === oldP) {
+            const { error } = await supabase.from('users').update({ password: newP }).eq('username', currentUserName);
+            setLoading(false);
+            if(!error) {
+                showToast(getTrans('msg_pass_changed')); closeModal('changePassModal');
+                setTimeout(() => { doLogout(); }, 1500);
+            } else { showMsg("Error", error.message); }
+        } else { setLoading(false); showMsg("Error", "Old password incorrect"); }
+    }
+
+    function clearLoginError() { document.getElementById('loginFeedback').innerText = ""; const btn = document.getElementById('btnLogin'); if(btn.disabled) { btn.disabled = false; btn.innerText = getTrans('btn_signin'); } }
+
+    function applyLoginState(name, uid, dept) {
+        currentUserDisplayName = name; currentUserName = uid; currentUserDept = dept;
+        document.getElementById('loginOverlay').style.display = 'none';
+        if (currentUserDept === "Pending") { document.getElementById('pendingOverlay').style.display = 'flex'; return; }
+        
+        document.getElementById('pendingOverlay').style.display = 'none';
+        document.getElementById('logoutBtn').style.display = 'block';
+        document.getElementById('changePassBtn').style.display = 'block'; 
+        document.getElementById('userInfoDisplay').innerText = `${currentUserDisplayName} (${currentUserDept})`;
+        
+        showToast("Welcome, " + currentUserDisplayName);
+        fetchData(); resetLogoutTimer(); 
+    }
+
+    function doLogout() { sessionStorage.clear(); location.reload(); }
+
+    async function fetchData() {
+        setLoading(true);
+        try {
+            // 1. Fetch Master Data - 對應 DB 的 master 表
+            const { data: masterData } = await supabase.from('master').select('*');
+            materialMaster = {};
+            if(masterData) {
+                masterData.forEach(item => {
+                    // 將 DB 欄位轉譯為前端所需變數
+                    materialMaster[item.part_number] = {
+                        model: item.model || '',
+                        description: item.description || '',
+                        unit: item.unit || '',
+                        minStock: Number(item.main_stock || 0)
+                    };
+                });
+            }
+
+            // 2. Fetch Inventory - 對應 DB 的 inventory 表
+            const { data: invData } = await supabase.from('inventory').select('*');
+            inventoryList = (invData || []).map(item => {
+                const m = materialMaster[item.part_number] || {};
+                return {
+                    id: item.part_number,        // DB part_number -> JS id
+                    stock: Number(item.stock),   // DB stock -> JS stock
+                    location: item.location,     // DB location -> JS location
+                    model: m.model || '',
+                    description: m.description || '',
+                    unit: m.unit || '',
+                    minStock: Number(m.minStock || 0)
+                };
+            });
+
+            // 3. Fetch History - 對應 DB 的 history 表
+            const { data: histData } = await supabase.from('history').select('*').order('timestamp', { ascending: false }).limit(200);
+            historyList = (histData || []).map(h => ({
+                id: h.part_number,        // DB part_number -> JS id
+                date: h.timestamp,        // DB timestamp -> JS date
+                ref: h.reference,         // DB reference -> JS ref
+                action: h.action,         // DB action -> JS action
+                qty: Number(h.quantity),  // DB quantity -> JS qty
+                user: h.operator_user,    // DB operator_user -> JS user
+                note: h.note || ''
+            }));
+
+            renderTable(); renderDashboard(); renderMasterTable();
+        } catch(e) { console.error(e); showToast("Network Error", true); }
+        finally { setLoading(false); }
+    }
+
+    function applyFilter(filterType) {
+        currentFilter = filterType; switchView('inventory'); renderTable(true);
+        const tag = document.getElementById('filterTag'), text = document.getElementById('filterText');
+        if(filterType === 'all') tag.style.display = 'none';
+        else { tag.style.display = 'inline-flex'; text.innerText = filterType === 'crit' ? "Showing: Critical Stock" : "Showing: Low Stock"; }
+    }
+
+    function openReportModal() {
+        const now = new Date(), yyyy = now.getFullYear(), mm = String(now.getMonth() + 1).padStart(2, '0'), dd = String(now.getDate()).padStart(2, '0');
+        document.getElementById('rptStart').value = `${yyyy}-${mm}-01`; document.getElementById('rptEnd').value = `${yyyy}-${mm}-${dd}`;
+        openModal('reportModal');
+    }
+
+    async function downloadReport() {
+        const start = document.getElementById('rptStart').value, end = document.getElementById('rptEnd').value;
+        if(!start || !end) { showToast("Select dates!", true); return; }
+        setLoading(true);
+        
+        const endDay = new Date(end); endDay.setDate(endDay.getDate() + 1);
+        // Query 對應 history 表
+        const { data, error } = await supabase.from('history').select('timestamp, reference, action, part_number, quantity, operator_user, note').gte('timestamp', start).lt('timestamp', endDay.toISOString());
+        
+        setLoading(false);
+        if(error) showMsg("Error", error.message);
+        else if(!data || data.length === 0) showMsg("No Data", "No movements found.");
+        else {
+            const ws = XLSX.utils.json_to_sheet(data); const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Report"); XLSX.writeFile(wb, `Report_${start}_to_${end}.xlsx`);
+            closeModal('reportModal');
+        }
+    }
+
+    function exportToExcel(type) {
+        let data = [], filename = "";
+        if (type === 'inventory') {
+            filename = "Inventory_List.xlsx";
+            data = inventoryList.map(i => ({ "Part Number": i.id, "Model": i.model, "Description": i.description, "Location": i.location, "Stock": i.stock, "Unit": i.unit, "Main Stock": i.minStock }));
+        } else if (type === 'master') {
+            filename = "Master_Data.xlsx";
+            data = Object.keys(materialMaster).map(key => ({ "Part Number": key, "Model": materialMaster[key].model, "Description": materialMaster[key].description, "Unit": materialMaster[key].unit, "Main Stock": materialMaster[key].minStock }));
+        }
+        if(data.length === 0) { showToast("No data to export", true); return; }
+        const ws = XLSX.utils.json_to_sheet(data); const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Sheet1"); XLSX.writeFile(wb, filename);
+    }
+
+    function switchView(viewName) {
+        ['Dashboard','Inventory','Master'].forEach(v => { document.getElementById('view'+v).style.display = 'none'; document.getElementById('tab'+(v==='Dashboard'?'Dash':v==='Inventory'?'Inv':'Master')).classList.remove('active'); });
+        document.getElementById('view'+ (viewName==='dashboard'?'Dashboard':viewName==='inventory'?'Inventory':'Master')).style.display = 'block';
+        document.getElementById('tab'+ (viewName==='dashboard'?'Dash':viewName==='inventory'?'Inv':'Master')).classList.add('active');
+    }
+
+    function renderDashboard() {
+        let crit = 0, low = 0, total = inventoryList.length;
+        inventoryList.forEach(item => { if(item.stock <= 0) crit++; else if(item.stock < item.minStock) low++; });
+        document.getElementById('dashCrit').innerText = crit; document.getElementById('dashLow').innerText = low; document.getElementById('dashTotal').innerText = total;
+        document.querySelector('[data-i18n="card_crit"]').innerText = i18n[currentLang].card_crit.replace('(0)', `(${crit})`);
+        document.getElementById('dashHistory').innerHTML = historyList.slice(0, 10).map(h => `<div style="border-bottom:1px solid #eee; padding:5px 0;"><span style="font-weight:bold;">${h.id}</span> <span style="float:right; color:${h.qty>0?'green':'red'}">${h.qty>0?'+':''}${h.qty}</span><div style="font-size:11px; color:#999;">${new Date(h.date).toLocaleDateString()} - ${h.action}</div></div>`).join('');
+    }
+
+    function toggleSort(col) { sortCol === col ? sortAsc = !sortAsc : (sortCol = col, sortAsc = true); renderTable(true); }
+    function updateSortIcons() { document.querySelectorAll('.sort-icon').forEach(el => el.innerText = ''); if (sortCol && document.getElementById(`sort-${sortCol}`)) document.getElementById(`sort-${sortCol}`).innerText = sortAsc ? '▲' : '▼'; }
+
+    function renderTable(resetPage = false) {
+        if(resetPage) curPageInv = 1;
+        const tbody = document.getElementById('inventoryBody'); const term = document.getElementById('searchInv').value.toLowerCase();
+        tbody.innerHTML = '';
+        
+        let filteredList = inventoryList.filter(item => {
+            const matchSearch = (item.id + item.model + item.description).toLowerCase().includes(term);
+            let matchStatus = true;
+            if(currentFilter === 'crit') matchStatus = (item.stock <= 0); else if (currentFilter === 'low') matchStatus = (item.stock > 0 && item.stock < item.minStock);
+            return matchSearch && matchStatus;
+        });
+
+        if (sortCol) filteredList.sort((a, b) => { let vA = a[sortCol], vB = b[sortCol]; if(typeof vA === 'number') return sortAsc ? vA - vB : vB - vA; vA = String(vA).toLowerCase(); vB = String(vB).toLowerCase(); return vA < vB ? (sortAsc?-1:1) : vA > vB ? (sortAsc?1:-1) : 0; });
+        updateSortIcons();
+
+        const totalPages = Math.ceil(filteredList.length / pageSize) || 1; if(curPageInv > totalPages) curPageInv = totalPages || 1;
+        filteredList.slice((curPageInv - 1) * pageSize, curPageInv * pageSize).forEach((item) => {
+            let statusClass = item.stock <= 0 ? 'status-crit' : item.stock < item.minStock ? 'status-low' : 'status-ok'; 
+            const tr = document.createElement('tr'); tr.onclick = () => openDetailsObj(item);
+            tr.innerHTML = `<td class="col-status"><span class="status-dot ${statusClass}"></span></td><td class="col-pn"><div style="font-size:14px;">${item.id}</div><div class="mobile-info"><div class="mobile-model">${item.model}</div><div class="mobile-desc">${item.description}</div></div></td><td class="col-model desktop-only">${item.model}</td><td class="col-desc desktop-only" style="color:#666; font-size:13px;">${item.description}</td><td class="col-loc"><span>${item.location||'-'}</span></td><td class="col-stock">${item.stock}</td><td class="col-unit desktop-only" style="color:#666; font-size:12px;">${item.unit}</td><td class="col-action" style="text-align:center;"><span style="color:#0a6ed1; font-weight:bold; font-size:12px;">${i18n[currentLang].txt_display}</span></td>`;
+            tbody.appendChild(tr);
+        });
+        updatePagination('invPagination', curPageInv, totalPages, filteredList.length, 'changePage');
+    }
+
+    function updatePagination(eid, cur, tot, len, func) { document.getElementById(eid).innerHTML = `<button class="btn-page" onclick="${func}(-1)" ${cur === 1 ? 'disabled' : ''}>◀</button><span class="page-info">${i18n[currentLang].txt_page} ${cur} ${i18n[currentLang].txt_of} ${tot} (${len})</span><button class="btn-page" onclick="${func}(1)" ${cur === tot || tot === 0 ? 'disabled' : ''}>▶</button>`; }
+    function changePage(delta) { curPageInv += delta; renderTable(false); }
+    function changeMasterPage(delta) { curPageMaster += delta; renderMasterTable(false); }
+
+    function renderMasterTable(resetPage = false) {
+        if(resetPage) curPageMaster = 1;
+        const tbody = document.getElementById('masterBody'); const term = document.getElementById('searchMaster').value.toLowerCase(); tbody.innerHTML = '';
+        const masterArr = Object.keys(materialMaster).map(k => ({ id: k, ...materialMaster[k] })).filter(i => (i.id+i.model+i.description).toLowerCase().includes(term));
+        const totalPages = Math.ceil(masterArr.length / pageSize) || 1; if(curPageMaster > totalPages) curPageMaster = totalPages;
+
+        masterArr.slice((curPageMaster - 1) * pageSize, curPageMaster * pageSize).forEach((item) => {
+            const tr = document.createElement('tr'); tr.onclick = () => { let invItem = inventoryList.find(i => i.id === item.id); openDetailsObj(invItem || { ...item, stock: 0 }); };
+            tr.innerHTML = `<td class="col-pn"><div style="font-size:14px;">${item.id}</div><div class="mobile-info"><div class="mobile-model">${item.model}</div><div class="mobile-desc">${item.description}</div></div></td><td class="col-model desktop-only">${item.model}</td><td class="col-desc desktop-only" style="color:#666; font-size:13px;">${item.description}</td><td class="col-unit">${item.unit}</td><td class="col-stock desktop-only">${item.minStock}</td><td class="col-action" id="action-${item.id}"></td>`;
+            tbody.appendChild(tr);
+
+            const td = document.getElementById(`action-${item.id}`);
+            const btnDisp = document.createElement('span'); btnDisp.innerText = i18n[currentLang].txt_display; btnDisp.style.cssText = 'color:#0a6ed1; font-weight:bold; font-size:12px; cursor:pointer;'; btnDisp.onclick = (e) => { e.stopPropagation(); tr.onclick(); }; td.appendChild(btnDisp);
+            const btnDel = document.createElement('span'); btnDel.className = 'btn-delete'; btnDel.innerText = '✕';
+            btnDel.onclick = (e) => {
+                e.stopPropagation(); const stk = (inventoryList.find(i => i.id === item.id) || {}).stock || 0;
+                if (stk > 0) { showMsg(currentLang === 'zh' ? "無法刪除" : "Cannot Delete", currentLang === 'zh' ? `料號 ${item.id} 尚有庫存 (${stk})。` : `Part ${item.id} still has stock.`); return; }
+                const f = document.querySelector('#msgModal .dialog-footer'); const o = f.innerHTML;
+                document.getElementById('msgTitle').innerText = currentLang === 'zh' ? "刪除確認" : "Delete Confirmation"; document.getElementById('msgContent').innerText = currentLang === 'zh' ? "確定要刪除此物料主檔嗎？" : "Delete this master data permanently?";
+                f.innerHTML = `<button class="std-btn btn-transparent" id="msgCancel">${currentLang==='zh'?'取消':'Cancel'}</button><button class="std-btn btn-primary" id="msgConfirm">${currentLang==='zh'?'刪除':'Delete'}</button>`;
+                document.getElementById('msgCancel').onclick = () => { closeModal('msgModal'); deleteMaster(item.id); setTimeout(() => f.innerHTML = o, 300); };
+                document.getElementById('msgConfirm').onclick = () => { closeModal('msgModal'); deleteMaster(item.id); setTimeout(() => f.innerHTML = o, 300); };
+                openModal('msgModal');
+            }; td.appendChild(btnDel);
+        });
+        updatePagination('masterPagination', curPageMaster, totalPages, masterArr.length, 'changeMasterPage');
+    }
+
+    function openDetailsObj(item) {
+        document.getElementById('detId').innerText = item.id; document.getElementById('detModel').innerText = item.model; document.getElementById('detDesc').innerText = item.description; document.getElementById('detStock').innerText = item.stock; document.getElementById('detLoc').innerText = item.location || "None";
+        const hList = historyList.filter(h => h.id === item.id);
+        document.getElementById('detHistory').innerHTML = hList.length ? hList.map(h => `<div style="border-bottom:1px solid #eee; padding:8px 0;"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;"><span style="font-weight:600; font-size:13px; color:#333;">${h.action} <span style="color:${h.qty > 0 ? '#107e3e' : '#bb0000'}">(${h.qty > 0 ? '+' : ''}${h.qty})</span></span><span style="font-size:11px; color:#888;">${new Date(h.date).toLocaleDateString()}</span></div><div style="display:flex; justify-content:space-between; font-size:12px; color:#666;"><span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:180px;">📄 ${h.ref || '-'}</span><span>👤 ${h.user}</span></div></div>`).join('') : '<div style="text-align:center; padding:10px; color:#999;">No History</div>';
+        openModal('detailsModal');
+    }
+
+    function openTxModal(type) {
+        currentTxType = type;
+        document.getElementById('txTitle').innerText = type === 'receive' ? i18n[currentLang].btn_po : i18n[currentLang].btn_issue;
+        document.getElementById('txDate').value = new Date().toISOString().split('T')[0]; document.getElementById('txUser').value = currentUserDisplayName; document.getElementById('txRef').value = ""; document.getElementById('txBody').innerHTML = "";
+        addTxRow(); openModal('txModal');
+    }
+
+    function addTxRow() {
+        const tr = document.createElement('tr'), isIss = currentTxType === 'issue';
+        tr.innerHTML = `<td><input type="text" class="tx-input tx-id" onchange="resolvePart(this)"></td><td><input type="text" class="tx-input tx-info" readonly tabindex="-1"></td><td><input type="number" class="tx-input tx-qty"></td><td><input type="text" class="tx-input tx-loc" ${isIss?'readonly tabindex="-1"':''} style="${isIss?'background-color:#f5f5f5; color:#666;':''}"></td><td style="text-align:center; cursor:pointer; color:#ccc;" onclick="this.parentElement.remove()">✕</td>`;
+        document.getElementById('txBody').appendChild(tr);
+    }
+
+    function resolvePart(input) {
+        const id = input.value.trim(), row = input.parentElement.parentElement; row.querySelector('.tx-info').value = ""; row.querySelector('.tx-loc').value = ""; if (!id) return;
+        let invItem = inventoryList.find(i => i.id === id), mat = materialMaster[id];
+        if (currentTxType === 'receive') {
+            if (!mat) { showMsg(i18n[currentLang].msg_unknown_title, i18n[currentLang].msg_unknown_body); input.value = ""; return; }
+            row.querySelector('.tx-info').value = mat.description || mat.model; if (invItem) row.querySelector('.tx-loc').value = invItem.location || "";
+        } else if (invItem) { row.querySelector('.tx-info').value = invItem.description || invItem.model; row.querySelector('.tx-loc').value = invItem.location || ""; }
+    }
+
+    function submitTx() {
+        const lang = i18n[currentLang], ref = document.getElementById('txRef').value.trim(), user = document.getElementById('txUser').value.trim(); 
+        if (!ref || !user) { showMsg(lang.msg_input_required, lang.msg_input_empty); return; }
+        const rows = document.querySelectorAll('#txBody tr'), items = [];
+        for (let i = 0; i < rows.length; i++) {
+            const id = rows[i].querySelector('.tx-id').value.trim(), qty = Number(rows[i].querySelector('.tx-qty').value.trim()), loc = rows[i].querySelector('.tx-loc').value.trim();
+            if (!id || isNaN(qty) || qty <= 0) { showMsg(lang.msg_input_required, `Row ${i + 1} invalid`); return; }
+            if (currentTxType === 'receive' && !loc) { showMsg(lang.msg_input_required, `Row ${i + 1} needs Location`); return; }
+            if (currentTxType === 'issue') { const inv = inventoryList.find(item => item.id === id); if (!inv || qty > inv.stock) { showMsg(lang.error_title, `Part ${id} insufficient stock!`); return; } }
+            items.push({ id, qty, loc });
+        }
+        document.getElementById('msgTitle').innerText = lang.confirm_post_title; document.getElementById('msgContent').innerText = lang.confirm_post_body;
+        document.querySelector('#msgModal .btn-primary').onclick = function() { closeModal('msgModal'); executeSubmit(items); }; openModal('msgModal');
+    }
+
+    async function executeSubmit(items) {
+        const ref = document.getElementById('txRef').value, displayUser = document.getElementById('txUser').value;
+        if(items.length === 0) return; setLoading(true);
+        try {
+            for(let item of items) {
+                // Update Local UI State Immediately
+                let invItem = inventoryList.find(i => i.id === item.id);
+                if (currentTxType === 'receive') {
+                    if (invItem) { 
+                        invItem.stock += item.qty; 
+                        if(item.loc) invItem.location = item.loc; 
+                    } else { 
+                        const m = materialMaster[item.id]; 
+                        inventoryList.push({ id: item.id, stock: item.qty, location: item.loc, model: m.model, description: m.description, minStock: m.minStock, unit: m.unit }); 
+                        invItem = inventoryList[inventoryList.length-1]; 
+                    }
+                } else if (invItem) invItem.stock -= item.qty;
+                
+                historyList.unshift({ date: new Date().toISOString(), ref: ref, action: currentTxType === 'receive' ? 'GR (In)' : 'GI (Out)', id: item.id, qty: currentTxType === 'receive' ? item.qty : -item.qty, user: displayUser });
+                
+                // Supabase Sync (Upsert to inventory table, mapping JS variables to DB columns)
+                await supabase.from('inventory').upsert({ 
+                    part_number: item.id, 
+                    model: invItem.model,
+                    description: invItem.description,
+                    stock: invItem.stock, 
+                    unit: invItem.unit,
+                    main_stock: invItem.minStock,
+                    location: invItem.location,
+                    department: currentUserDept
+                });
+                
+                // Supabase Sync (Insert to history table)
+                await supabase.from('history').insert([{ 
+                    reference: ref, 
+                    action: currentTxType === 'receive' ? 'GR (In)' : 'GI (Out)', 
+                    part_number: item.id, 
+                    quantity: currentTxType === 'receive' ? item.qty : -item.qty, 
+                    operator_user: displayUser,
+                    note: ''
+                }]);
+            }
+            renderTable(); renderDashboard(); closeModal('txModal'); showToast("Transaction Posted!");
+        } catch(e) { showMsg("Error", "Sync Failed: " + e.message); } finally { setLoading(false); }
+    }
+
+    async function deleteMaster(id) {
+        setLoading(true);
+        // Supabase Sync: Delete from master table (inventory is automatically cascaded if SQL FK is set)
+        const { error } = await supabase.from('master').delete().eq('part_number', id);
+        setLoading(false);
+        if(!error) { 
+            delete materialMaster[id]; 
+            inventoryList = inventoryList.filter(i => i.id !== id); 
+            renderMasterTable(); 
+            showToast(i18n[currentLang].deleted); 
+        } else {
+            showMsg("Error", error.message);
+        }
+    }
+
+    function openCreateMasterModal() { ['newId','newModel','newDesc','newUnit'].forEach(id => document.getElementById(id).value = ""); document.getElementById('newMinStock').value = 0; document.getElementById('newDept').value = sessionStorage.getItem('wms_dept') || "Pending"; document.getElementById('newUser').value = currentUserDisplayName; openModal('createModal'); }
+    function checkMasterExists() { const id = document.getElementById('newId').value.trim(), fb = document.getElementById('masterFeedback'); if(inventoryList.find(i => i.id === id) || materialMaster[id]) { fb.innerText = "⚠️ Exists"; fb.style.color = "red"; } else { fb.innerText = "✅ Available"; fb.style.color = "green"; } }
+
+    async function submitCreateMaster() {
+        const id = document.getElementById('newId').value.trim(), model = document.getElementById('newModel').value, desc = document.getElementById('newDesc').value, unit = document.getElementById('newUnit').value, min = document.getElementById('newMinStock').value, dept = document.getElementById('newDept').value;
+        if(!id) { showToast("ID Required", true); return; }
+        setLoading(true);
+        
+        // Supabase Sync: Insert to master table mapping to correct DB column names
+        const { error } = await supabase.from('master').insert([{ 
+            part_number: id, 
+            model: model, 
+            description: desc, 
+            unit: unit, 
+            main_stock: min,
+            department: dept
+        }]);
+        
+        setLoading(false);
+        if(!error) { 
+            materialMaster[id] = { model, description: desc, unit, minStock: min }; 
+            renderMasterTable(); 
+            closeModal('createModal'); 
+            showToast("Created!"); 
+        } else {
+            showMsg("Error", error.message);
+        }
+    }
+
+    function toggleLanguage() { currentLang = currentLang === 'en' ? 'zh' : 'en'; document.querySelectorAll('[data-i18n]').forEach(el => { const key = el.getAttribute('data-i18n'); if(i18n[currentLang][key]) el.innerText = i18n[currentLang][key]; }); renderTable(); renderDashboard(); renderMasterTable(); }
+    function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+    function setLoading(b) { document.getElementById('loading').style.display = b?'block':'none'; document.querySelector('.table-container').style.opacity = b?0.5:1; }
+    function showToast(msg, err) { const t = document.getElementById('toast'); t.innerText = msg; t.style.background = err ? "#bb0000" : "#32363a"; t.style.opacity = 1; setTimeout(()=>t.style.opacity=0, 3000); }
+    
+    checkAutoLogin();
+</script>
+</body>
+</html>
