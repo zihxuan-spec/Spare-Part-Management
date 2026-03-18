@@ -316,7 +316,9 @@
     // 🔥 請在此處填寫您的 Supabase URL 與 Anon Key
     const supabaseUrl = 'https://gvsglqvfkgfdymcntldb.supabase.co';
     const supabaseKey = 'sb_publishable_s5grpgB4G9GP1gF9_YIcqw_f9cz-ZB7';
-    const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+    
+    // 💡 修正點：將變數名稱從 supabase 改為 supaClient，避免與上方引入的套件衝突
+    const supaClient = supabase.createClient(supabaseUrl, supabaseKey);
 
     let inventoryList = [];
     let materialMaster = {};
@@ -405,8 +407,8 @@
         
         btn.innerText = "Connecting..."; btn.disabled = true; setLoading(true); 
         
-        // Supabase Login (Query 'users' table)
-        const { data, error } = await supabase.from('users').select('*').eq('username', user).eq('password', pass).single();
+        // 💡 修正點：使用 supaClient 呼叫 API
+        const { data, error } = await supaClient.from('users').select('*').eq('username', user).eq('password', pass).single();
         
         setLoading(false);
         if(data) {
@@ -434,8 +436,8 @@
         if(!u || !p || !n) { showToast(getTrans('msg_fill_all'), true); return; }
         btn.disabled = true; btn.innerText = "Processing..."; setLoading(true);
         
-        // Supabase Insert to 'users' table
-        const { error } = await supabase.from('users').insert([{ username: u, password: p, name: n, department: 'Pending' }]);
+        // 💡 修正點：使用 supaClient
+        const { error } = await supaClient.from('users').insert([{ username: u, password: p, name: n, department: 'Pending' }]);
         
         setLoading(false); btn.disabled = false; btn.innerText = getTrans('btn_signup');
         if(!error) {
@@ -455,9 +457,9 @@
         if(newP !== confP) { showToast(getTrans('msg_pass_mismatch'), true); return; }
         
         setLoading(true);
-        const { data } = await supabase.from('users').select('password').eq('username', currentUserName).single();
+        const { data } = await supaClient.from('users').select('password').eq('username', currentUserName).single();
         if(data && data.password === oldP) {
-            const { error } = await supabase.from('users').update({ password: newP }).eq('username', currentUserName);
+            const { error } = await supaClient.from('users').update({ password: newP }).eq('username', currentUserName);
             setLoading(false);
             if(!error) {
                 showToast(getTrans('msg_pass_changed')); closeModal('changePassModal');
@@ -487,12 +489,11 @@
     async function fetchData() {
         setLoading(true);
         try {
-            // 1. Fetch Master Data - 對應 DB 的 master 表
-            const { data: masterData } = await supabase.from('master').select('*');
+            // 💡 修正點：使用 supaClient
+            const { data: masterData } = await supaClient.from('master').select('*');
             materialMaster = {};
             if(masterData) {
                 masterData.forEach(item => {
-                    // 將 DB 欄位轉譯為前端所需變數
                     materialMaster[item.part_number] = {
                         model: item.model || '',
                         description: item.description || '',
@@ -502,14 +503,13 @@
                 });
             }
 
-            // 2. Fetch Inventory - 對應 DB 的 inventory 表
-            const { data: invData } = await supabase.from('inventory').select('*');
+            const { data: invData } = await supaClient.from('inventory').select('*');
             inventoryList = (invData || []).map(item => {
                 const m = materialMaster[item.part_number] || {};
                 return {
-                    id: item.part_number,        // DB part_number -> JS id
-                    stock: Number(item.stock),   // DB stock -> JS stock
-                    location: item.location,     // DB location -> JS location
+                    id: item.part_number,        
+                    stock: Number(item.stock),   
+                    location: item.location,     
                     model: m.model || '',
                     description: m.description || '',
                     unit: m.unit || '',
@@ -517,15 +517,14 @@
                 };
             });
 
-            // 3. Fetch History - 對應 DB 的 history 表
-            const { data: histData } = await supabase.from('history').select('*').order('timestamp', { ascending: false }).limit(200);
+            const { data: histData } = await supaClient.from('history').select('*').order('timestamp', { ascending: false }).limit(200);
             historyList = (histData || []).map(h => ({
-                id: h.part_number,        // DB part_number -> JS id
-                date: h.timestamp,        // DB timestamp -> JS date
-                ref: h.reference,         // DB reference -> JS ref
-                action: h.action,         // DB action -> JS action
-                qty: Number(h.quantity),  // DB quantity -> JS qty
-                user: h.operator_user,    // DB operator_user -> JS user
+                id: h.part_number,        
+                date: h.timestamp,        
+                ref: h.reference,         
+                action: h.action,         
+                qty: Number(h.quantity),  
+                user: h.operator_user,    
                 note: h.note || ''
             }));
 
@@ -553,8 +552,7 @@
         setLoading(true);
         
         const endDay = new Date(end); endDay.setDate(endDay.getDate() + 1);
-        // Query 對應 history 表
-        const { data, error } = await supabase.from('history').select('timestamp, reference, action, part_number, quantity, operator_user, note').gte('timestamp', start).lt('timestamp', endDay.toISOString());
+        const { data, error } = await supaClient.from('history').select('timestamp, reference, action, part_number, quantity, operator_user, note').gte('timestamp', start).lt('timestamp', endDay.toISOString());
         
         setLoading(false);
         if(error) showMsg("Error", error.message);
@@ -646,7 +644,7 @@
                 const f = document.querySelector('#msgModal .dialog-footer'); const o = f.innerHTML;
                 document.getElementById('msgTitle').innerText = currentLang === 'zh' ? "刪除確認" : "Delete Confirmation"; document.getElementById('msgContent').innerText = currentLang === 'zh' ? "確定要刪除此物料主檔嗎？" : "Delete this master data permanently?";
                 f.innerHTML = `<button class="std-btn btn-transparent" id="msgCancel">${currentLang==='zh'?'取消':'Cancel'}</button><button class="std-btn btn-primary" id="msgConfirm">${currentLang==='zh'?'刪除':'Delete'}</button>`;
-                document.getElementById('msgCancel').onclick = () => { closeModal('msgModal'); deleteMaster(item.id); setTimeout(() => f.innerHTML = o, 300); };
+                document.getElementById('msgCancel').onclick = () => { closeModal('msgModal'); setTimeout(() => f.innerHTML = o, 300); };
                 document.getElementById('msgConfirm').onclick = () => { closeModal('msgModal'); deleteMaster(item.id); setTimeout(() => f.innerHTML = o, 300); };
                 openModal('msgModal');
             }; td.appendChild(btnDel);
@@ -703,7 +701,6 @@
         if(items.length === 0) return; setLoading(true);
         try {
             for(let item of items) {
-                // Update Local UI State Immediately
                 let invItem = inventoryList.find(i => i.id === item.id);
                 if (currentTxType === 'receive') {
                     if (invItem) { 
@@ -718,8 +715,7 @@
                 
                 historyList.unshift({ date: new Date().toISOString(), ref: ref, action: currentTxType === 'receive' ? 'GR (In)' : 'GI (Out)', id: item.id, qty: currentTxType === 'receive' ? item.qty : -item.qty, user: displayUser });
                 
-                // Supabase Sync (Upsert to inventory table, mapping JS variables to DB columns)
-                await supabase.from('inventory').upsert({ 
+                await supaClient.from('inventory').upsert({ 
                     part_number: item.id, 
                     model: invItem.model,
                     description: invItem.description,
@@ -730,8 +726,7 @@
                     department: currentUserDept
                 });
                 
-                // Supabase Sync (Insert to history table)
-                await supabase.from('history').insert([{ 
+                await supaClient.from('history').insert([{ 
                     reference: ref, 
                     action: currentTxType === 'receive' ? 'GR (In)' : 'GI (Out)', 
                     part_number: item.id, 
@@ -746,8 +741,7 @@
 
     async function deleteMaster(id) {
         setLoading(true);
-        // Supabase Sync: Delete from master table (inventory is automatically cascaded if SQL FK is set)
-        const { error } = await supabase.from('master').delete().eq('part_number', id);
+        const { error } = await supaClient.from('master').delete().eq('part_number', id);
         setLoading(false);
         if(!error) { 
             delete materialMaster[id]; 
@@ -767,8 +761,7 @@
         if(!id) { showToast("ID Required", true); return; }
         setLoading(true);
         
-        // Supabase Sync: Insert to master table mapping to correct DB column names
-        const { error } = await supabase.from('master').insert([{ 
+        const { error } = await supaClient.from('master').insert([{ 
             part_number: id, 
             model: model, 
             description: desc, 
