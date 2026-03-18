@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>WMS Enterprise</title>
+    <title>WMS Enterprise Secure</title>
     
     <link rel="apple-touch-icon" href="https://placehold.co/180x180/354a5f/ffffff.png?text=WMS&font=roboto">
     <link rel="icon" href="https://placehold.co/192x192/354a5f/ffffff.png?text=WMS&font=roboto">
@@ -12,7 +12,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <style>
-        /* CSS 保持您原本完美適應的 SAP Fiori 樣式 */
+        /* CSS 完全不變，維持 Fiori 樣式 */
         :root {
             --sap-shell-color: #354a5f; --sap-bg-color: #edf0f4; --sap-surface-color: #ffffff;
             --sap-text-color: #32363a; --sap-border-color: #d9d9d9;
@@ -132,7 +132,7 @@
     <div class="std-dialog" style="width:320px; padding:20px; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
         <div style="text-align:center; margin-bottom:20px;">
             <h2 style="color:var(--sap-shell-color); margin:0;">Sunlit AZ WMS</h2>
-            <p style="font-size:12px; color:#666; margin-top:5px;">Please sign in to continue</p>
+            <p style="font-size:12px; color:#666; margin-top:5px;">Secure Enterprise Login</p>
         </div>
         <div style="display:grid; gap:15px;">
             <input type="text" id="loginUser" class="std-input" placeholder="Username" style="width:100%;" oninput="clearLoginError()">
@@ -233,7 +233,7 @@
         <div class="dialog-content">
             <div style="display:grid; gap:15px;">
                 <div><label class="form-label" data-i18n="lbl_account">Username</label><input type="text" id="regUser" class="std-input"></div>
-                <div><label class="form-label" data-i18n="lbl_password">Password</label><input type="password" id="regPass" class="std-input"></div>
+                <div><label class="form-label" data-i18n="lbl_password">Password (Min 6 chars)</label><input type="password" id="regPass" class="std-input"></div>
                 <div><label class="form-label" data-i18n="lbl_name">Display Name</label><input type="text" id="regName" class="std-input"></div>
                 <div style="font-size:12px; color:#666; background:#f9f9f9; padding:10px; border-radius:4px;"><span data-i18n="msg_reg_note">Note: New accounts are set to "Pending". An admin must assign your department.</span></div>
             </div>
@@ -245,7 +245,7 @@
 <div id="changePassModal" class="modal-overlay">
     <div class="std-dialog" style="width:350px;">
         <div class="dialog-header"><span data-i18n="modal_cp_title">Change Password</span><span style="cursor:pointer;" onclick="closeModal('changePassModal')">✕</span></div>
-        <div class="dialog-content"><div style="display:grid; gap:15px;"><div><label class="form-label" data-i18n="lbl_old_pass">Old Password</label><input type="password" id="cpOld" class="std-input"></div><div><label class="form-label" data-i18n="lbl_new_pass">New Password</label><input type="password" id="cpNew" class="std-input"></div><div><label class="form-label" data-i18n="lbl_confirm_pass">Confirm New</label><input type="password" id="cpConfirm" class="std-input"></div></div></div>
+        <div class="dialog-content"><div style="display:grid; gap:15px;"><div><label class="form-label" data-i18n="lbl_new_pass">New Password</label><input type="password" id="cpNew" class="std-input"></div><div><label class="form-label" data-i18n="lbl_confirm_pass">Confirm New</label><input type="password" id="cpConfirm" class="std-input"></div></div></div>
         <div class="dialog-footer"><button class="std-btn btn-transparent" onclick="closeModal('changePassModal')" data-i18n="btn_cancel">Cancel</button><button class="std-btn btn-primary" onclick="doChangePass()" data-i18n="btn_change">Change</button></div>
     </div>
 </div>
@@ -280,7 +280,7 @@
                 <div><label class="form-label" data-i18n="col_unit">Base UoM</label><input type="text" id="newUnit" class="std-input"></div>
                 <div><label class="form-label" data-i18n="lbl_safe">Safety Stock</label><input type="number" id="newMinStock" class="std-input" value="0"></div>
                 <div><label class="form-label">Department</label><input type="text" id="newDept" class="std-input" readonly disabled style="background:#f5f5f5; color:#666;"></div>
-                <div><label class="form-label" data-i18n="lbl_user">User</label><input type="text" id="newUser" class="std-input"></div>
+                <div><label class="form-label" data-i18n="lbl_user">User</label><input type="text" id="newUser" class="std-input" readonly disabled style="background:#f5f5f5; color:#666;"></div>
             </div>
         </div>
         <div class="dialog-footer"><button class="std-btn btn-transparent" onclick="closeModal('createModal')" data-i18n="btn_cancel">Cancel</button><button class="std-btn btn-primary" onclick="submitCreateMaster()" data-i18n="btn_save">Save</button></div>
@@ -317,6 +317,9 @@
     const supabaseKey = 'sb_publishable_s5grpgB4G9GP1gF9_YIcqw_f9cz-ZB7';
     const supaClient = supabase.createClient(supabaseUrl, supabaseKey);
 
+    // 💡 小魔術：設定您的專屬虛擬網域，讓輸入 Username 就能完成 Auth 的 Email 驗證
+    const VIRTUAL_DOMAIN = "@sunlit-wms.local";
+
     let inventoryList = [];
     let materialMaster = {};
     let historyList = [];
@@ -329,8 +332,6 @@
     let curPageInv = 1, curPageMaster = 1;
     const pageSize = 50;
     let sortCol = '', sortAsc = true, currentFilter = 'all';
-    let logoutTimer;
-    const AUTO_LOGOUT_TIME = 30 * 60 * 1000; 
 
     // 翻譯字庫
     const i18n = {
@@ -346,33 +347,127 @@
     });
 
     // -------------------------
-    // 2. 核心 API 互動層 (Supabase)
+    // 2. 帳號安全管理層 (Supabase Auth)
+    // -------------------------
+    async function doLogin() {
+        const user = document.getElementById('loginUser').value.trim();
+        const pass = document.getElementById('loginPass').value.trim();
+        const fb = document.getElementById('loginFeedback'), btn = document.getElementById('btnLogin'); 
+        fb.innerText = "";
+        if(!user || !pass) { fb.style.color = "#bb0000"; fb.innerText = "Please enter username and password"; return; }
+        
+        btn.innerText = "Connecting..."; btn.disabled = true; setLoading(true); 
+        
+        // 🔒 使用加密的 Auth API 登入 (組合虛擬 Email)
+        const { data: authData, error: authError } = await supaClient.auth.signInWithPassword({
+            email: user + VIRTUAL_DOMAIN,
+            password: pass
+        });
+
+        if(authError) {
+            setLoading(false);
+            fb.style.color = "#bb0000"; 
+            fb.innerText = "Invalid Credentials"; 
+            btn.innerText = getTrans('btn_signin'); btn.disabled = false;
+            return;
+        }
+
+        // 登入成功後，利用 Token 去 Profiles 表抓部門與顯示名稱
+        const { data: profile } = await supaClient.from('profiles').select('name, department').eq('id', authData.user.id).single();
+        setLoading(false);
+
+        if(profile) {
+            fb.innerText = "Success!";
+            applyLoginState(profile.name, user, profile.department);
+        }
+    }
+
+    async function doRegister() {
+        const u = document.getElementById('regUser').value.trim(), p = document.getElementById('regPass').value.trim(), n = document.getElementById('regName').value.trim();
+        if(!u || !p || !n) { showToast(getTrans('msg_fill_all'), true); return; }
+        if(p.length < 6) { showToast("Password minimum 6 characters", true); return; } // Auth 限制最少 6 碼
+        
+        setLoading(true);
+        // 🔒 使用 Auth 註冊，並將使用者名稱傳給 Trigger 處理
+        const { data, error } = await supaClient.auth.signUp({
+            email: u + VIRTUAL_DOMAIN,
+            password: p,
+            options: { data: { username: u, name: n } }
+        });
+        
+        setLoading(false);
+        if(!error) { 
+            // 註冊完先強迫登出，避免自動登入
+            await supaClient.auth.signOut();
+            closeModal('registerModal'); 
+            showMsg("Registration Sent", currentLang === 'en' ? "Registration sent! Your account is 'Pending'." : "申請已送出！您的帳號目前為 '待審核' 狀態。"); 
+        } 
+        else { showMsg("Error", error.message); }
+    }
+
+    async function doChangePass() {
+        const newP = document.getElementById('cpNew').value.trim(), confP = document.getElementById('cpConfirm').value.trim();
+        if(!newP) { showToast(getTrans('msg_fill_all'), true); return; }
+        if(newP !== confP) { showToast(getTrans('msg_pass_mismatch'), true); return; }
+        if(newP.length < 6) { showToast("Password minimum 6 characters", true); return; }
+
+        setLoading(true);
+        // 🔒 使用 Auth API 更新密碼 (因為已登入，有權限直接改)
+        const { error } = await supaClient.auth.updateUser({ password: newP });
+        setLoading(false);
+
+        if(!error) { 
+            showToast(getTrans('msg_pass_changed')); closeModal('changePassModal'); 
+            setTimeout(() => { doLogout(); }, 1500); 
+        } 
+        else { showMsg("Error", error.message); }
+    }
+
+    async function checkAutoLogin() {
+        // 🔒 檢查瀏覽器內是否有存活的 Auth Session (Token)
+        const { data: { session } } = await supaClient.auth.getSession();
+        if (session) {
+            // 從 profiles 拿取最新權限
+            const { data: profile } = await supaClient.from('profiles').select('username, name, department').eq('id', session.user.id).single();
+            if(profile) {
+                applyLoginState(profile.name, profile.username, profile.department);
+            } else {
+                doLogout();
+            }
+        }
+    }
+
+    function applyLoginState(name, uid, dept) {
+        currentUserDisplayName = name; currentUserName = uid; currentUserDept = dept;
+        document.getElementById('loginOverlay').style.display = 'none';
+        if (currentUserDept === "Pending") { document.getElementById('pendingOverlay').style.display = 'flex'; return; }
+        document.getElementById('pendingOverlay').style.display = 'none'; document.getElementById('logoutBtn').style.display = 'block'; document.getElementById('changePassBtn').style.display = 'block'; document.getElementById('userInfoDisplay').innerText = `${currentUserDisplayName} (${currentUserDept})`;
+        showToast("Welcome, " + currentUserDisplayName); fetchData();
+    }
+    
+    async function doLogout() { 
+        await supaClient.auth.signOut(); // 🔒 清除 Token
+        location.reload(); 
+    }
+    
+    function clearLoginError() { document.getElementById('loginFeedback').innerText = ""; const btn = document.getElementById('btnLogin'); if(btn.disabled) { btn.disabled = false; btn.innerText = getTrans('btn_signin'); } }
+    function openRegister() { ['regUser','regPass','regName'].forEach(id => document.getElementById(id).value = ""); openModal('registerModal'); }
+    function openChangePass() { ['cpNew','cpConfirm'].forEach(id => document.getElementById(id).value = ""); openModal('changePassModal'); }
+
+    // -------------------------
+    // 3. 核心 API 互動層 (有 RLS 保護)
     // -------------------------
     async function fetchData() {
         setLoading(true);
         try {
-            // 抓取主檔
+            // 因為現在有 RLS 保護，沒登入的人這幾行會直接報錯，確保資料不外洩
             const { data: masterData } = await supaClient.from('master').select('*');
             materialMaster = {};
-            if (masterData) {
-                masterData.forEach(item => {
-                    materialMaster[item.part_number] = { model: item.model || '', description: item.description || '', unit: item.unit || '', minStock: Number(item.main_stock || 0) };
-                });
-            }
+            if (masterData) masterData.forEach(item => { materialMaster[item.part_number] = { model: item.model || '', description: item.description || '', unit: item.unit || '', minStock: Number(item.main_stock || 0) }; });
 
-            // 抓取庫存並透過 JOIN 取得主檔資訊 (正規化應用)
             const { data: invData } = await supaClient.from('inventory').select('*, master(model, description, unit, main_stock)');
-            inventoryList = (invData || []).map(item => ({
-                id: item.part_number,
-                stock: Number(item.stock),
-                location: item.location,
-                model: item.master?.model || '',
-                description: item.master?.description || '',
-                unit: item.master?.unit || '',
-                minStock: Number(item.master?.main_stock || 0)
-            }));
+            inventoryList = (invData || []).map(item => ({ id: item.part_number, stock: Number(item.stock), location: item.location, model: item.master?.model || '', description: item.master?.description || '', unit: item.master?.unit || '', minStock: Number(item.master?.main_stock || 0) }));
 
-            // 抓取歷史
             const { data: histData } = await supaClient.from('history').select('*').order('timestamp', { ascending: false }).limit(200);
             historyList = (histData || []).map(h => ({ id: h.part_number, date: h.timestamp, ref: h.reference, action: h.action, qty: Number(h.quantity), user: h.operator_user, note: h.note || '' }));
 
@@ -386,94 +481,35 @@
         if(items.length === 0) return; setLoading(true);
 
         try {
-            // 呼叫預存程序 RPC，解決 Race Condition
-            const { data, error } = await supaClient.rpc('process_transaction', {
-                tx_type: currentTxType,
-                tx_ref: ref,
-                tx_user: displayUser,
-                tx_items: items // [{id, qty, loc}]
-            });
-
+            const { data, error } = await supaClient.rpc('process_transaction', { tx_type: currentTxType, tx_ref: ref, tx_user: displayUser, tx_items: items });
             if (error) throw error;
             showToast("Transaction Posted!");
-            closeModal('txModal');
-            fetchData(); // 重新抓取最新資料確保同步
-        } catch(e) { 
-            showMsg("Transaction Failed", e.message || "Unknown Error"); 
-        } finally { 
-            setLoading(false); 
-        }
+            closeModal('txModal'); fetchData(); 
+        } catch(e) { showMsg("Transaction Failed", e.message || "Unknown Error"); } finally { setLoading(false); }
     }
 
-    // -------------------------
-    // 3. 帳號與權限層
-    // -------------------------
-    async function doLogin() {
-        const user = document.getElementById('loginUser').value.trim(), pass = document.getElementById('loginPass').value.trim();
-        const fb = document.getElementById('loginFeedback'), btn = document.getElementById('btnLogin'); 
-        fb.innerText = "";
-        if(!user || !pass) { fb.style.color = "#bb0000"; fb.innerText = "Please enter username and password"; return; }
-        
-        btn.innerText = "Connecting..."; btn.disabled = true; setLoading(true); 
-        const { data } = await supaClient.from('users').select('*').eq('username', user).eq('password', pass).maybeSingle();
+    async function deleteMaster(id) {
+        setLoading(true); const { error } = await supaClient.from('master').delete().eq('part_number', id); setLoading(false);
+        if(!error) { delete materialMaster[id]; inventoryList = inventoryList.filter(i => i.id !== id); renderMasterTable(); showToast(i18n[currentLang].deleted); } else showMsg("Error", error.message);
+    }
+
+    async function submitCreateMaster() {
+        const id = document.getElementById('newId').value.trim(), model = document.getElementById('newModel').value, desc = document.getElementById('newDesc').value, unit = document.getElementById('newUnit').value, min = document.getElementById('newMinStock').value, dept = document.getElementById('newDept').value;
+        if(!id) { showToast("ID Required", true); return; } setLoading(true);
+        const { error } = await supaClient.from('master').insert([{ part_number: id, model, description: desc, unit, main_stock: min, department: dept }]); setLoading(false);
+        if(!error) { materialMaster[id] = { model, description: desc, unit, minStock: min }; renderMasterTable(); closeModal('createModal'); showToast("Created!"); } else showMsg("Error", error.message);
+    }
+
+    async function downloadReport() {
+        const start = document.getElementById('rptStart').value, end = document.getElementById('rptEnd').value; if(!start || !end) { showToast("Select dates!", true); return; } setLoading(true);
+        const endDay = new Date(end); endDay.setDate(endDay.getDate() + 1);
+        const { data, error } = await supaClient.from('history').select('timestamp, reference, action, part_number, quantity, operator_user, note').gte('timestamp', start).lt('timestamp', endDay.toISOString());
         setLoading(false);
-
-        if(data) {
-            fb.innerText = "Success!";
-            sessionStorage.setItem('wms_user', data.name); sessionStorage.setItem('wms_uid', data.username); sessionStorage.setItem('wms_dept', data.department); sessionStorage.setItem('wms_last_active', Date.now()); 
-            applyLoginState(data.name, data.username, data.department);
-        } else {
-            fb.style.color = "#bb0000"; fb.innerText = "Invalid Credentials"; btn.innerText = getTrans('btn_signin'); btn.disabled = false;
-        }
+        if(error) showMsg("Error", error.message); else if(!data || data.length === 0) showMsg("No Data", "No movements found."); else { const ws = XLSX.utils.json_to_sheet(data); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Report"); XLSX.writeFile(wb, `Report_${start}_to_${end}.xlsx`); closeModal('reportModal'); }
     }
-
-    async function doRegister() {
-        const u = document.getElementById('regUser').value.trim(), p = document.getElementById('regPass').value.trim(), n = document.getElementById('regName').value.trim();
-        if(!u || !p || !n) { showToast(getTrans('msg_fill_all'), true); return; }
-        setLoading(true);
-        const { error } = await supaClient.from('users').insert([{ username: u, password: p, name: n, department: 'Pending' }]);
-        setLoading(false);
-        if(!error) { closeModal('registerModal'); showMsg("Registration Sent", currentLang === 'en' ? "Registration sent! Your account is 'Pending'." : "申請已送出！您的帳號目前為 '待審核' 狀態。"); } 
-        else { showMsg("Error", error.message); }
-    }
-
-    async function doChangePass() {
-        const oldP = document.getElementById('cpOld').value.trim(), newP = document.getElementById('cpNew').value.trim(), confP = document.getElementById('cpConfirm').value.trim();
-        if(!oldP || !newP) { showToast(getTrans('msg_fill_all'), true); return; }
-        if(newP !== confP) { showToast(getTrans('msg_pass_mismatch'), true); return; }
-        setLoading(true);
-        const { data } = await supaClient.from('users').select('password').eq('username', currentUserName).maybeSingle();
-        if(data && data.password === oldP) {
-            const { error } = await supaClient.from('users').update({ password: newP }).eq('username', currentUserName);
-            setLoading(false);
-            if(!error) { showToast(getTrans('msg_pass_changed')); closeModal('changePassModal'); setTimeout(() => { doLogout(); }, 1500); } 
-            else { showMsg("Error", error.message); }
-        } else { setLoading(false); showMsg("Error", "Old password incorrect"); }
-    }
-
-    function checkAutoLogin() {
-        const sUser = sessionStorage.getItem('wms_user'), sUid = sessionStorage.getItem('wms_uid'), sDept = sessionStorage.getItem('wms_dept'), lastAct = sessionStorage.getItem('wms_last_active');
-        if (lastAct && (Date.now() - lastAct > AUTO_LOGOUT_TIME)) { doLogout(); return; }
-        if (sUser) applyLoginState(sUser, sUid, sDept);
-    }
-
-    function applyLoginState(name, uid, dept) {
-        currentUserDisplayName = name; currentUserName = uid; currentUserDept = dept;
-        document.getElementById('loginOverlay').style.display = 'none';
-        if (currentUserDept === "Pending") { document.getElementById('pendingOverlay').style.display = 'flex'; return; }
-        document.getElementById('pendingOverlay').style.display = 'none'; document.getElementById('logoutBtn').style.display = 'block'; document.getElementById('changePassBtn').style.display = 'block'; document.getElementById('userInfoDisplay').innerText = `${currentUserDisplayName} (${currentUserDept})`;
-        showToast("Welcome, " + currentUserDisplayName); fetchData(); resetLogoutTimer(); 
-    }
-    
-    function resetLogoutTimer() { if (!sessionStorage.getItem('wms_user')) return; sessionStorage.setItem('wms_last_active', Date.now()); clearTimeout(logoutTimer); logoutTimer = setTimeout(() => { doLogout(); }, AUTO_LOGOUT_TIME); }
-    ['mousemove', 'keydown', 'click', 'touchstart'].forEach(evt => document.addEventListener(evt, resetLogoutTimer));
-    function doLogout() { sessionStorage.clear(); location.reload(); }
-    function clearLoginError() { document.getElementById('loginFeedback').innerText = ""; const btn = document.getElementById('btnLogin'); if(btn.disabled) { btn.disabled = false; btn.innerText = getTrans('btn_signin'); } }
-    function openRegister() { ['regUser','regPass','regName'].forEach(id => document.getElementById(id).value = ""); openModal('registerModal'); }
-    function openChangePass() { ['cpOld','cpNew','cpConfirm'].forEach(id => document.getElementById(id).value = ""); openModal('changePassModal'); }
 
     // -------------------------
-    // 4. UI 渲染與事件層
+    // 4. UI 渲染與事件層 (與前版相同)
     // -------------------------
     function showMsg(title, text) { document.getElementById('msgTitle').innerText = title; document.getElementById('msgTitle').style.color = "var(--sap-critical)"; document.getElementById('msgContent').innerText = text; document.querySelector('#msgModal .btn-primary').onclick = () => closeModal('msgModal'); openModal('msgModal'); }
     function openModal(id) { document.getElementById(id).style.display = 'flex'; }
@@ -488,10 +524,8 @@
     function updateSortIcons() { document.querySelectorAll('.sort-icon').forEach(el => el.innerText = ''); if (sortCol && document.getElementById(`sort-${sortCol}`)) document.getElementById(`sort-${sortCol}`).innerText = sortAsc ? '▲' : '▼'; }
 
     function renderDashboard() {
-        let crit = 0, low = 0, total = inventoryList.length;
-        inventoryList.forEach(i => { if(i.stock <= 0) crit++; else if(i.stock < i.minStock) low++; });
-        document.getElementById('dashCrit').innerText = crit; document.getElementById('dashLow').innerText = low; document.getElementById('dashTotal').innerText = total;
-        document.querySelector('[data-i18n="card_crit"]').innerText = i18n[currentLang].card_crit.replace('(0)', `(${crit})`);
+        let crit = 0, low = 0, total = inventoryList.length; inventoryList.forEach(i => { if(i.stock <= 0) crit++; else if(i.stock < i.minStock) low++; });
+        document.getElementById('dashCrit').innerText = crit; document.getElementById('dashLow').innerText = low; document.getElementById('dashTotal').innerText = total; document.querySelector('[data-i18n="card_crit"]').innerText = i18n[currentLang].card_crit.replace('(0)', `(${crit})`);
         document.getElementById('dashHistory').innerHTML = historyList.slice(0, 10).map(h => `<div style="border-bottom:1px solid #eee; padding:5px 0;"><span style="font-weight:bold;">${h.id}</span> <span style="float:right; color:${h.qty>0?'green':'red'}">${h.qty>0?'+':''}${h.qty}</span><div style="font-size:11px; color:#999;">${new Date(h.date).toLocaleDateString()} - ${h.action}</div></div>`).join('');
     }
 
@@ -545,13 +579,10 @@
         openModal('detailsModal');
     }
 
-    // -------------------------
-    // 5. 異動單邏輯 (Tx)
-    // -------------------------
     function openTxModal(type) { currentTxType = type; document.getElementById('txTitle').innerText = type === 'receive' ? i18n[currentLang].btn_po : i18n[currentLang].btn_issue; document.getElementById('txDate').value = new Date().toISOString().split('T')[0]; document.getElementById('txUser').value = currentUserDisplayName; document.getElementById('txRef').value = ""; document.getElementById('txBody').innerHTML = ""; addTxRow(); openModal('txModal'); }
     function addTxRow() { const tr = document.createElement('tr'), isIss = currentTxType === 'issue'; tr.innerHTML = `<td><input type="text" class="tx-input tx-id" onchange="resolvePart(this)"></td><td><input type="text" class="tx-input tx-info" readonly tabindex="-1"></td><td><input type="number" class="tx-input tx-qty"></td><td><input type="text" class="tx-input tx-loc" ${isIss?'readonly tabindex="-1"':''} style="${isIss?'background-color:#f5f5f5; color:#666;':''}"></td><td style="text-align:center; cursor:pointer; color:#ccc;" onclick="this.parentElement.remove()">✕</td>`; document.getElementById('txBody').appendChild(tr); }
     function resolvePart(input) { const id = input.value.trim(), row = input.parentElement.parentElement; row.querySelector('.tx-info').value = ""; row.querySelector('.tx-loc').value = ""; if (!id) return; let invItem = inventoryList.find(i => i.id === id), mat = materialMaster[id]; if (currentTxType === 'receive') { if (!mat) { showMsg(i18n[currentLang].msg_unknown_title, i18n[currentLang].msg_unknown_body); input.value = ""; return; } row.querySelector('.tx-info').value = mat.description || mat.model; if (invItem) row.querySelector('.tx-loc').value = invItem.location || ""; } else if (invItem) { row.querySelector('.tx-info').value = invItem.description || invItem.model; row.querySelector('.tx-loc').value = invItem.location || ""; } }
-
+    
     function submitTx() {
         const lang = i18n[currentLang], ref = document.getElementById('txRef').value.trim(), user = document.getElementById('txUser').value.trim(), rows = document.querySelectorAll('#txBody tr'), items = [];
         if (!ref || !user) { showMsg(lang.msg_input_required, lang.msg_input_empty); return; }
@@ -564,35 +595,10 @@
         document.getElementById('msgTitle').innerText = lang.confirm_post_title; document.getElementById('msgContent').innerText = lang.confirm_post_body;
         document.querySelector('#msgModal .btn-primary').onclick = function() { closeModal('msgModal'); executeSubmit(items); }; openModal('msgModal');
     }
-
-    // -------------------------
-    // 6. 其他報表與輔助功能
-    // -------------------------
-    async function deleteMaster(id) {
-        setLoading(true); const { error } = await supaClient.from('master').delete().eq('part_number', id); setLoading(false);
-        if(!error) { delete materialMaster[id]; inventoryList = inventoryList.filter(i => i.id !== id); renderMasterTable(); showToast(i18n[currentLang].deleted); } else showMsg("Error", error.message);
-    }
-
-    function openCreateMasterModal() { ['newId','newModel','newDesc','newUnit'].forEach(id => document.getElementById(id).value = ""); document.getElementById('newMinStock').value = 0; document.getElementById('newDept').value = sessionStorage.getItem('wms_dept') || "Pending"; document.getElementById('newUser').value = currentUserDisplayName; openModal('createModal'); }
+    
+    function openCreateMasterModal() { ['newId','newModel','newDesc','newUnit'].forEach(id => document.getElementById(id).value = ""); document.getElementById('newMinStock').value = 0; document.getElementById('newDept').value = currentUserDept || "Pending"; document.getElementById('newUser').value = currentUserDisplayName; openModal('createModal'); }
     function checkMasterExists() { const id = document.getElementById('newId').value.trim(), fb = document.getElementById('masterFeedback'); if(inventoryList.find(i => i.id === id) || materialMaster[id]) { fb.innerText = "⚠️ Exists"; fb.style.color = "red"; } else { fb.innerText = "✅ Available"; fb.style.color = "green"; } }
-    
-    async function submitCreateMaster() {
-        const id = document.getElementById('newId').value.trim(), model = document.getElementById('newModel').value, desc = document.getElementById('newDesc').value, unit = document.getElementById('newUnit').value, min = document.getElementById('newMinStock').value, dept = document.getElementById('newDept').value;
-        if(!id) { showToast("ID Required", true); return; } setLoading(true);
-        const { error } = await supaClient.from('master').insert([{ part_number: id, model, description: desc, unit, main_stock: min, department: dept }]); setLoading(false);
-        if(!error) { materialMaster[id] = { model, description: desc, unit, minStock: min }; renderMasterTable(); closeModal('createModal'); showToast("Created!"); } else showMsg("Error", error.message);
-    }
-
     function openReportModal() { const now = new Date(), y = now.getFullYear(), m = String(now.getMonth() + 1).padStart(2, '0'), d = String(now.getDate()).padStart(2, '0'); document.getElementById('rptStart').value = `${y}-${m}-01`; document.getElementById('rptEnd').value = `${y}-${m}-${d}`; openModal('reportModal'); }
-    
-    async function downloadReport() {
-        const start = document.getElementById('rptStart').value, end = document.getElementById('rptEnd').value; if(!start || !end) { showToast("Select dates!", true); return; } setLoading(true);
-        const endDay = new Date(end); endDay.setDate(endDay.getDate() + 1);
-        const { data, error } = await supaClient.from('history').select('timestamp, reference, action, part_number, quantity, operator_user, note').gte('timestamp', start).lt('timestamp', endDay.toISOString());
-        setLoading(false);
-        if(error) showMsg("Error", error.message); else if(!data || data.length === 0) showMsg("No Data", "No movements found."); else { const ws = XLSX.utils.json_to_sheet(data); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Report"); XLSX.writeFile(wb, `Report_${start}_to_${end}.xlsx`); closeModal('reportModal'); }
-    }
-
     function exportToExcel(type) {
         let data = [], filename = "";
         if (type === 'inventory') { filename = "Inventory_List.xlsx"; data = inventoryList.map(i => ({ "Part Number": i.id, "Model": i.model, "Description": i.description, "Location": i.location, "Stock": i.stock, "Unit": i.unit, "Main Stock": i.minStock })); } 
