@@ -53,8 +53,67 @@ function applyLoginState(name, uid, dept) {
 }
 async function doLogout() { await supaClient.auth.signOut(); location.reload(); }
 function clearLoginError() { document.getElementById('loginFeedback').innerText = ""; const btn = document.getElementById('btnLogin'); if(btn.disabled) { btn.disabled = false; btn.innerText = getTrans('btn_signin'); } }
-async function doRegister() { /* 原註冊代碼保持不變，可沿用上一版的寫法 */ }
-async function doChangePass() { /* 原修改密碼代碼保持不變，可沿用上一版的寫法 */ }
+// 處理註冊邏輯
+async function doRegister() {
+    const u = document.getElementById('regUser').value.trim();
+    const p = document.getElementById('regPass').value.trim();
+    const n = document.getElementById('regName').value.trim();
+    if(!u || !p || !n) { showToast(getTrans('msg_fill_all'), true); return; }
+    if(p.length < 6) { showToast("Password minimum 6 characters", true); return; } 
+    
+    setLoading(true);
+    // 🔒 呼叫 Supabase Auth 註冊 API
+    const { data, error } = await supaClient.auth.signUp({
+        email: u + VIRTUAL_DOMAIN,
+        password: p,
+        options: { data: { username: u, name: n } }
+    });
+    
+    setLoading(false);
+    if(!error) { 
+        await supaClient.auth.signOut();
+        closeModal('registerModal'); 
+        showMsg("Registration Sent", currentLang === 'en' ? "Registration sent! Your account is 'Pending'." : "申請已送出！您的帳號目前為 '待審核' 狀態。"); 
+    } 
+    else { showMsg("Error", error.message); }
+}
+
+// 處理修改密碼邏輯
+async function doChangePass() {
+    const newP = document.getElementById('cpNew').value.trim();
+    const confP = document.getElementById('cpConfirm').value.trim();
+    
+    // 檢查欄位與長度
+    if(!newP || !confP) { showToast(getTrans('msg_fill_all'), true); return; }
+    if(newP !== confP) { showToast(getTrans('msg_pass_mismatch'), true); return; }
+    if(newP.length < 6) { showToast("Password minimum 6 characters", true); return; }
+
+    setLoading(true);
+    // 🔒 呼叫 Supabase Auth API 安全更新密碼
+    const { error } = await supaClient.auth.updateUser({ password: newP });
+    setLoading(false);
+
+    if(!error) { 
+        showToast(getTrans('msg_pass_changed')); 
+        closeModal('changePassModal'); 
+        // 密碼修改成功後，延遲 1.5 秒自動登出
+        setTimeout(() => { doLogout(); }, 1500); 
+    } 
+    else { showMsg("Error", error.message); }
+}
+
+// 開啟彈窗時清除舊輸入的文字
+function openRegister() { 
+    ['regUser','regPass','regName'].forEach(id => document.getElementById(id).value = ""); 
+    openModal('registerModal'); 
+}
+function openChangePass() { 
+    // 確保即使 HTML 有舊密碼欄位 cpOld，也不會因為找不到元素而報錯
+    ['cpOld','cpNew','cpConfirm'].forEach(id => { 
+        if(document.getElementById(id)) document.getElementById(id).value = ""; 
+    }); 
+    openModal('changePassModal'); 
+}
 
 // 3. Server-Side 大數據與即時監聽 (核心進化)
 function setupRealtime() {
