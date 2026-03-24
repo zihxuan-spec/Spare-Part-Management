@@ -1,7 +1,7 @@
 // 1. 初始化與環境設定
 const supabaseUrl = 'https://gvsglqvfkgfdymcntldb.supabase.co';
 const supabaseKey = 'sb_publishable_s5grpgB4G9GP1gF9_YIcqw_f9cz-ZB7';
-// 🔒 關鍵修改：強制 Supabase 使用「短期記憶 (sessionStorage)」，關閉網頁即銷毀登入狀態
+// 💡 關鍵在這裡：加上大括號裡的 auth 設定！
 const supaClient = supabase.createClient(supabaseUrl, supabaseKey, {
     auth: { storage: window.sessionStorage }
 });
