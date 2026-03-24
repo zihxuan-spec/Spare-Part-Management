@@ -1,7 +1,10 @@
 // 1. 初始化與環境設定
 const supabaseUrl = 'https://gvsglqvfkgfdymcntldb.supabase.co';
 const supabaseKey = 'sb_publishable_s5grpgB4G9GP1gF9_YIcqw_f9cz-ZB7';
-const supaClient = supabase.createClient(supabaseUrl, supabaseKey);
+// 🔒 關鍵修改：強制 Supabase 使用「短期記憶 (sessionStorage)」，關閉網頁即銷毀登入狀態
+const supaClient = supabase.createClient(supabaseUrl, supabaseKey, {
+    auth: { storage: window.sessionStorage }
+});
 const VIRTUAL_DOMAIN = "@sunlit-wms.com";
 
 let currentLang = 'en', currentTxType = 'receive';
@@ -37,11 +40,11 @@ async function doLogin() {
 }
 
 async function checkAutoLogin() {
-    // 🔒 防護 1：檢查「最後活動時間」是否已經超過設定時間
-    const lastActive = localStorage.getItem('wms_last_active');
+    // 🔒 防護 1：檢查「最後活動時間」是否超過 30 分鐘
+    const lastActive = sessionStorage.getItem('wms_last_active');
     if (lastActive && (Date.now() - parseInt(lastActive) > AUTO_LOGOUT_TIME)) {
         await supaClient.auth.signOut();
-        localStorage.removeItem('wms_last_active');
+        sessionStorage.removeItem('wms_last_active');
         return; // 直接中斷，停留在登入畫面
     }
 
@@ -65,7 +68,7 @@ function applyLoginState(name, uid, dept) {
 
 async function doLogout() { 
     await supaClient.auth.signOut(); 
-    localStorage.removeItem('wms_last_active'); // 清除活動時間
+    sessionStorage.removeItem('wms_last_active'); 
     location.reload(); 
 }
 
@@ -75,7 +78,7 @@ function clearLoginError() { document.getElementById('loginFeedback').innerText 
 function resetLogoutTimer() {
     if (!currentUserName) return; // 沒登入時不計時
     
-    localStorage.setItem('wms_last_active', Date.now());
+    sessionStorage.setItem('wms_last_active', Date.now());
     clearTimeout(logoutTimer);
     logoutTimer = setTimeout(() => {
         showMsg(currentLang === 'zh' ? "自動登出" : "Auto Logout", currentLang === 'zh' ? "閒置過久，系統已自動登出保護您的資料。" : "Session timed out due to inactivity.");
