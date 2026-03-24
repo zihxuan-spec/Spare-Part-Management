@@ -1,5 +1,5 @@
 // 1. 把版本號改成 v2 強制瀏覽器更新快取
-const CACHE_NAME = 'wms-cache-v6';
+const CACHE_NAME = 'wms-cache-v7';
 
 // 2. 把前面的斜線 / 改成 ./ (相對路徑)
 const urlsToCache = [
