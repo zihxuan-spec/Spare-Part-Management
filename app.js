@@ -10,7 +10,7 @@ let curPageInv = 1, curPageMaster = 1;
 const pageSize = 50;
 let sortCol = '', sortAsc = true, currentFilter = 'all';
 let logoutTimer;
-const AUTO_LOGOUT_TIME = 30 * 60 * 1000;
+const AUTO_LOGOUT_TIME = 30 * 60 * 1000; // 30 分鐘
 
 // 翻譯字庫
 const i18n = {
@@ -18,7 +18,6 @@ const i18n = {
     zh: { tab_inv: "庫存列表", tab_dash: "管理看板", tab_master: "物料主檔", btn_refresh: "刷新", btn_po: "收貨入庫", btn_issue: "發貨領料", btn_create: "建立物料", col_pn: "料號", col_model: "型號", col_desc: "品名描述", col_loc: "儲位", col_stock: "庫存", col_unit: "單位", lbl_ref: "採購單號/用途", lbl_user: "操作人員", lbl_date: "日期", lbl_qty: "數量", lbl_safe: "安全庫存", btn_add_line: "新增項目", btn_cancel: "取消", btn_post: "過帳", btn_save: "儲存", btn_close: "關閉", btn_ok: "確定", card_crit: "缺料警告", sub_crit: "庫存為 0", card_low: "低庫存", sub_low: "低於安全水位", card_total: "物料總數", sub_total: "系統內 SKU", card_hist: "最近異動", modal_detail: "詳細資訊", txt_display: "查看", btn_logout: "登出", btn_pwd: "密碼", lbl_account: "帳號", lbl_password: "密碼", lbl_name: "顯示名稱", btn_signin: "登入", btn_signup: "註冊", btn_change: "修改", txt_new_user: "還沒帳號?", link_register: "點此註冊", modal_reg_title: "註冊帳號", modal_cp_title: "修改密碼", lbl_old_pass: "舊密碼", lbl_new_pass: "新密碼", lbl_confirm_pass: "確認新密碼", msg_reg_success: "註冊成功！請登入。", msg_pass_changed: "密碼已修改！請重新登入。", msg_pass_mismatch: "新密碼不一致", msg_fill_all: "請填寫所有欄位", confirm_post_title: "過帳確認", confirm_post_body: "您確定要提交這些異動資料嗎？", confirm_delete: "確定要刪除此物料主檔嗎？", deleted: "已刪除！", msg_input_required: "欄位必填", msg_input_empty: "請填寫單號/用途與操作人員欄位。", txt_page: "第", txt_of: "頁 / 共" }
 };
 
-// 🔥 修復：補上遺失的翻譯函數
 function getTrans(key) { return i18n[currentLang][key] || key; }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -38,6 +37,14 @@ async function doLogin() {
 }
 
 async function checkAutoLogin() {
+    // 🔒 防護 1：檢查「最後活動時間」是否已經超過設定時間
+    const lastActive = localStorage.getItem('wms_last_active');
+    if (lastActive && (Date.now() - parseInt(lastActive) > AUTO_LOGOUT_TIME)) {
+        await supaClient.auth.signOut();
+        localStorage.removeItem('wms_last_active');
+        return; // 直接中斷，停留在登入畫面
+    }
+
     const { data: { session } } = await supaClient.auth.getSession();
     if (session) {
         const { data: p } = await supaClient.from('profiles').select('username, name, department').eq('id', session.user.id).single();
@@ -51,12 +58,36 @@ function applyLoginState(name, uid, dept) {
     if (dept === "Pending") { document.getElementById('pendingOverlay').style.display = 'flex'; return; }
     document.getElementById('pendingOverlay').style.display = 'none'; document.getElementById('logoutBtn').style.display = 'block'; document.getElementById('changePassBtn').style.display = 'block'; document.getElementById('userInfoDisplay').innerText = `${name} (${dept})`;
     setupRealtime(); fetchData(); 
+    
+    // 🔒 防護 2：登入後啟動閒置偵測計時器
+    resetLogoutTimer();
 }
 
-async function doLogout() { await supaClient.auth.signOut(); location.reload(); }
+async function doLogout() { 
+    await supaClient.auth.signOut(); 
+    localStorage.removeItem('wms_last_active'); // 清除活動時間
+    location.reload(); 
+}
+
 function clearLoginError() { document.getElementById('loginFeedback').innerText = ""; const btn = document.getElementById('btnLogin'); if(btn.disabled) { btn.disabled = false; btn.innerText = getTrans('btn_signin'); } }
 
-// 🔥 修復：完整的註冊與密碼修改邏輯
+// 🔥 閒置超時自動登出機制
+function resetLogoutTimer() {
+    if (!currentUserName) return; // 沒登入時不計時
+    
+    localStorage.setItem('wms_last_active', Date.now());
+    clearTimeout(logoutTimer);
+    logoutTimer = setTimeout(() => {
+        showMsg(currentLang === 'zh' ? "自動登出" : "Auto Logout", currentLang === 'zh' ? "閒置過久，系統已自動登出保護您的資料。" : "Session timed out due to inactivity.");
+        setTimeout(doLogout, 2500);
+    }, AUTO_LOGOUT_TIME);
+}
+
+// 監聽滑鼠或鍵盤動作，重置計時器
+['mousemove', 'keydown', 'click', 'touchstart'].forEach(evt => {
+    document.addEventListener(evt, resetLogoutTimer);
+});
+
 async function doRegister() {
     const u = document.getElementById('regUser').value.trim(), p = document.getElementById('regPass').value.trim(), n = document.getElementById('regName').value.trim();
     if(!u || !p || !n) { showToast(getTrans('msg_fill_all'), true); return; }
