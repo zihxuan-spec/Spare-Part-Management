@@ -150,7 +150,7 @@
                 <div><label class="form-label" data-i18n="lbl_date">Date</label><input type="text" id="txDate" class="std-input" disabled style="background:#f9f9f9;"></div>
             </div>
             <table class="tx-table">
-                <thead><tr><th style="width:140px;" data-i18n="col_pn">Part Number</th><th style="min-width:150px;" data-i18n="col_desc">Description</th><th style="width:80px;" data-i18n="lbl_qty">Qty</th><th style="width:70px;" data-i18n="col_loc">Loc</th><th style="width:30px;"></th></tr></thead>
+                <thead><tr><th style="width:220px;" data-i18n="col_pn">Part Number</th><th style="min-width:150px;" data-i18n="col_desc">Description</th><th style="width:80px;" data-i18n="lbl_qty">Qty</th><th style="width:70px;" data-i18n="col_loc">Loc</th><th style="width:30px;"></th></tr></thead>
                 <tbody id="txBody"></tbody>
             </table>
             <button class="std-btn btn-transparent" style="width:100%; border:1px dashed #0a6ed1; color:#0a6ed1;" onclick="addTxRow()">+ <span data-i18n="btn_add_line">Add Line</span></button>
@@ -208,6 +208,10 @@
         <div class="dialog-footer">
             <button class="std-btn btn-transparent" onclick="stopScanner()">取消</button>
         </div>
+        <div class="dialog-header">
+        <span data-i18n="modal_scan">📷 Scan Barcode / QR Code</span>
+        <span style="cursor:pointer;" onclick="stopScanner()">✕</span>
+        </div> 
     </div>
 </div>
 <div id="toast" class="toast"></div>
