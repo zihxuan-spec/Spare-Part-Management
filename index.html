@@ -13,6 +13,7 @@
 
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     
     <link rel="stylesheet" href="style.css">
 </head>
@@ -195,7 +196,20 @@
 <div id="msgModal" class="modal-overlay" style="z-index: 10003;">
     <div class="std-dialog" style="width: 400px; max-width: 90%;"><div class="dialog-header"><span id="msgTitle" style="color: var(--sap-critical);">System Message</span></div><div class="dialog-content" id="msgContent" style="padding: 20px; font-size: 14px; white-space: pre-wrap; color: #333;"></div><div class="dialog-footer"><button class="std-btn btn-primary" onclick="closeModal('msgModal')" data-i18n="btn_ok">OK</button></div></div>
 </div>
-
+<div id="scannerModal" class="modal-overlay" style="z-index: 10005;">
+    <div class="std-dialog" style="width: 400px; max-width: 95%;">
+        <div class="dialog-header">
+            <span>📷 掃描條碼 / QR Code</span>
+            <span style="cursor:pointer;" onclick="stopScanner()">✕</span>
+        </div>
+        <div class="dialog-content" style="padding: 0; background: #000;">
+            <div id="reader" width="100%"></div> 
+        </div>
+        <div class="dialog-footer">
+            <button class="std-btn btn-transparent" onclick="stopScanner()">取消</button>
+        </div>
+    </div>
+</div>
 <div id="toast" class="toast"></div>
     <script src="app.js"></script>
 </body>
