@@ -16,10 +16,8 @@ const AUTO_LOGOUT_TIME = 30 * 60 * 1000;
 
 // 翻譯字庫
 const i18n = {
-    en: { tab_inv: "Inventory", tab_dash: "Dashboard", tab_master: "Master Data", btn_refresh: "Refresh", btn_po: "Goods Receipt", btn_issue: "Goods Issue", btn_create: "Create Material", col_pn: "Part Number", col_model: "Model", col_desc: "Description", col_loc: "Loc", col_stock: "Stock", col_unit: "Unit", lbl_ref: "PO Number/Reference", lbl_user: "User", lbl_date: "Date", lbl_qty: "Qty", lbl_safe: "Safety Stock", btn_add_line: "Add Line", btn_cancel: "Cancel", btn_post: "Post", btn_save: "Save", btn_close: "Close", btn_ok: "OK", card_crit: "Critical Stock", sub_crit: "Items Out of Stock", card_low: "Low Stock", sub_low: "Below Safety Level", card_total: "Total Items", sub_total: "Active SKU Count", card_hist: "Recent Movements", modal_detail: "Details", txt_display: "Display", btn_logout: "Logout", btn_pwd: "Pwd", lbl_account: "Username", lbl_password: "Password", lbl_name: "Display Name", btn_signin: "Sign In", btn_signup: "Sign Up", btn_change: "Change", txt_new_user: "New User?", link_register: "Register Here", modal_reg_title: "Register Account", modal_cp_title: "Change Password", lbl_old_pass: "Old Password", lbl_new_pass: "New Password", lbl_confirm_pass: "Confirm New", msg_reg_success: "Register Success! Please Login.", msg_pass_changed: "Password Changed! Please login again.", msg_pass_mismatch: "Passwords do not match", msg_fill_all: "All fields required", confirm_post_title: "Post Confirmation", confirm_post_body: "Are you sure you want to post these transactions?", confirm_delete: "Delete this master data?", deleted: "Deleted!", msg_input_required: "Input Required", msg_input_empty: "Please fill in PO/Reference and User field.", txt_page: "Page", txt_of: "of", msg_unknown_title: "Unknown Part", msg_unknown_body: "Part not found in Master Data.", ph_search: "Search / Scan...", title_scan: "Scan Barcode", msg_scan_ok: "Scanned: ", err_cam_title: "Camera Error", err_cam_msg: "Cannot access camera. Please check permissions.", modal_scan: "📷 Scan Barcode / QR Code", lbl_dept: "Department", sel_dept: "Select Dept...", msg_sel_dept: "Please assign a department.", opt_all_dept: "All Depts",
-          card_today_in: "Today's Receipts", card_today_out: "Today's Issues", chart_health: "Inventory Health", chart_trend: "7-Day Movement Trend", card_top5: "🔥 Top 5 Moving (30d)", card_dead: "💤 Dead Stock Warning" },
-    zh: { tab_inv: "庫存列表", tab_dash: "管理看板", tab_master: "物料主檔", btn_refresh: "刷新", btn_po: "收貨入庫", btn_issue: "發貨領料", btn_create: "建立物料", col_pn: "料號", col_model: "型號", col_desc: "品名描述", col_loc: "儲位", col_stock: "庫存", col_unit: "單位", lbl_ref: "採購單號/用途", lbl_user: "操作人員", lbl_date: "日期", lbl_qty: "數量", lbl_safe: "安全庫存", btn_add_line: "新增項目", btn_cancel: "取消", btn_post: "過帳", btn_save: "儲存", btn_close: "關閉", btn_ok: "確定", card_crit: "缺料警告", sub_crit: "庫存為 0", card_low: "低庫存", sub_low: "低於安全水位", card_total: "物料總數", sub_total: "系統內 SKU", card_hist: "最近異動", modal_detail: "詳細資訊", txt_display: "查看", btn_logout: "登出", btn_pwd: "密碼", lbl_account: "帳號", lbl_password: "密碼", lbl_name: "顯示名稱", btn_signin: "登入", btn_signup: "註冊", btn_change: "修改", txt_new_user: "還沒帳號?", link_register: "點此註冊", modal_reg_title: "註冊帳號", modal_cp_title: "修改密碼", lbl_old_pass: "舊密碼", lbl_new_pass: "新密碼", lbl_confirm_pass: "確認新密碼", msg_reg_success: "註冊成功！請登入。", msg_pass_changed: "密碼已修改！請重新登入。", msg_pass_mismatch: "新密碼不一致", msg_fill_all: "請填寫所有欄位", confirm_post_title: "過帳確認", confirm_post_body: "您確定要提交這些異動資料嗎？", confirm_delete: "確定要刪除此物料主檔嗎？", deleted: "已刪除！", msg_input_required: "欄位必填", msg_input_empty: "請填寫單號/用途與操作人員欄位。", txt_page: "第", txt_of: "頁 / 共", msg_unknown_title: "未知料號", msg_unknown_body: "在系統主檔中找不到此料號。", ph_search: "搜尋 / 掃描...", title_scan: "掃描條碼", msg_scan_ok: "成功掃描: ", err_cam_title: "相機錯誤", err_cam_msg: "無法啟動相機，請確認是否給予權限。", modal_scan: "📷 掃描條碼 / QR Code", lbl_dept: "所屬部門", sel_dept: "請選擇部門...", msg_sel_dept: "請選擇該物料所屬部門", opt_all_dept: "全公司 (All)",
-          card_today_in: "今日入庫單數", card_today_out: "今日領料單數", chart_health: "庫存健康度", chart_trend: "近 7 天進出庫趨勢", card_top5: "🔥 高消耗排行榜 (30天)", card_dead: "💤 呆滯料預警 (30天未動)" }
+    en: { tab_inv: "Inventory", tab_dash: "Dashboard", tab_master: "Master Data", btn_refresh: "Refresh", btn_po: "Goods Receipt", btn_issue: "Goods Issue", btn_create: "Create Material", col_pn: "Part Number", col_model: "Model", col_desc: "Description", col_loc: "Loc", col_stock: "Stock", col_unit: "Unit", lbl_ref: "PO Number/Reference", lbl_user: "User", lbl_date: "Date", lbl_qty: "Qty", lbl_safe: "Safety Stock", btn_add_line: "Add Line", btn_cancel: "Cancel", btn_post: "Post", btn_save: "Save", btn_close: "Close", btn_ok: "OK", card_crit: "Critical Stock", sub_crit: "Items Out of Stock", card_low: "Low Stock", sub_low: "Below Safety Level", card_total: "Total Items", sub_total: "Active SKU Count", card_hist: "Recent Movements", modal_detail: "Details", txt_display: "Display", btn_logout: "Logout", btn_pwd: "Pwd", lbl_account: "Username", lbl_password: "Password", lbl_name: "Display Name", btn_signin: "Sign In", btn_signup: "Sign Up", btn_change: "Change", txt_new_user: "New User?", link_register: "Register Here", modal_reg_title: "Register Account", modal_cp_title: "Change Password", lbl_old_pass: "Old Password", lbl_new_pass: "New Password", lbl_confirm_pass: "Confirm New", msg_reg_success: "Register Success! Please Login.", msg_pass_changed: "Password Changed! Please login again.", msg_pass_mismatch: "Passwords do not match", msg_fill_all: "All fields required", confirm_post_title: "Post Confirmation", confirm_post_body: "Are you sure you want to post these transactions?", confirm_delete: "Delete this master data?", deleted: "Deleted!", msg_input_required: "Input Required", msg_input_empty: "Please fill in PO/Reference and User field.", txt_page: "Page", txt_of: "of", msg_unknown_title: "Unknown Part", msg_unknown_body: "Part not found in Master Data.", ph_search: "Search / Scan...", title_scan: "Scan Barcode", msg_scan_ok: "Scanned: ", err_cam_title: "Camera Error", err_cam_msg: "Cannot access camera. Please check permissions.", modal_scan: "📷 Scan Barcode / QR Code", lbl_dept: "Department", sel_dept: "Select Dept...", msg_sel_dept: "Please assign a department.", opt_all_dept: "All Depts", card_today_in: "Today's Receipts", card_today_out: "Today's Issues", chart_health: "Inventory Health", chart_trend: "7-Day Movement Trend", card_top5: "🔥 Top 5 Moving (30d)", card_dead: "💤 Dead Stock Warning" },
+    zh: { tab_inv: "庫存列表", tab_dash: "管理看板", tab_master: "物料主檔", btn_refresh: "刷新", btn_po: "收貨入庫", btn_issue: "發貨領料", btn_create: "建立物料", col_pn: "料號", col_model: "型號", col_desc: "品名描述", col_loc: "儲位", col_stock: "庫存", col_unit: "單位", lbl_ref: "採購單號/用途", lbl_user: "操作人員", lbl_date: "日期", lbl_qty: "數量", lbl_safe: "安全庫存", btn_add_line: "新增項目", btn_cancel: "取消", btn_post: "過帳", btn_save: "儲存", btn_close: "關閉", btn_ok: "確定", card_crit: "缺料警告", sub_crit: "庫存為 0", card_low: "低庫存", sub_low: "低於安全水位", card_total: "物料總數", sub_total: "系統內 SKU", card_hist: "最近異動", modal_detail: "詳細資訊", txt_display: "查看", btn_logout: "登出", btn_pwd: "密碼", lbl_account: "帳號", lbl_password: "密碼", lbl_name: "顯示名稱", btn_signin: "登入", btn_signup: "註冊", btn_change: "修改", txt_new_user: "還沒帳號?", link_register: "點此註冊", modal_reg_title: "註冊帳號", modal_cp_title: "修改密碼", lbl_old_pass: "舊密碼", lbl_new_pass: "新密碼", lbl_confirm_pass: "確認新密碼", msg_reg_success: "註冊成功！請登入。", msg_pass_changed: "密碼已修改！請重新登入。", msg_pass_mismatch: "新密碼不一致", msg_fill_all: "請填寫所有欄位", confirm_post_title: "過帳確認", confirm_post_body: "您確定要提交這些異動資料嗎？", confirm_delete: "確定要刪除此物料主檔嗎？", deleted: "已刪除！", msg_input_required: "欄位必填", msg_input_empty: "請填寫單號/用途與操作人員欄位。", txt_page: "第", txt_of: "頁 / 共", msg_unknown_title: "未知料號", msg_unknown_body: "在系統主檔中找不到此料號。", ph_search: "搜尋 / 掃描...", title_scan: "掃描條碼", msg_scan_ok: "成功掃描: ", err_cam_title: "相機錯誤", err_cam_msg: "無法啟動相機，請確認是否給予權限。", modal_scan: "📷 掃描條碼 / QR Code", lbl_dept: "所屬部門", sel_dept: "請選擇部門...", msg_sel_dept: "請選擇該物料所屬部門", opt_all_dept: "全公司 (All)", card_today_in: "今日入庫單數", card_today_out: "今日領料單數", chart_health: "庫存健康度", chart_trend: "近 7 天進出庫趨勢", card_top5: "🔥 高消耗排行榜 (30天)", card_dead: "💤 呆滯料預警 (30天未動)" }
 };
 
 function getTrans(key) { return i18n[currentLang][key] || key; }
@@ -59,7 +57,6 @@ function applyLoginState(name, uid, dept) {
     document.getElementById('changePassBtn').style.display = 'block'; 
     document.getElementById('userInfoDisplay').innerText = `${name} (${dept})`;
 
-    // 🔥 權限控管：開啟 Admin 的主檔標籤與全域視角切換器
     if (dept === 'Admin') {
         document.getElementById('tabMaster').style.display = 'block';
         document.getElementById('adminGlobalDept').style.display = 'block';
@@ -97,7 +94,6 @@ function openRegister() { ['regUser','regPass','regName'].forEach(id => { if(doc
 function openChangePass() { ['cpOld','cpNew','cpConfirm'].forEach(id => { if(document.getElementById(id)) document.getElementById(id).value = ""; }); openModal('changePassModal'); }
 
 // 3. Server-Side 大數據與即時監聽 
-// 🔥 取出當前目標部門的輔助函數
 function getTargetDept() {
     return currentUserDept === 'Admin' ? document.getElementById('adminGlobalDept').value : currentUserDept;
 }
@@ -134,8 +130,9 @@ async function fetchDashboardStats() {
 
     document.getElementById('dashCrit').innerText = critCount;
     document.getElementById('dashLow').innerText = lowCount;
+    document.getElementById('dashTotal').innerText = invData ? invData.length : 0; // 🔥 補上總物料數
 
-    // 2. 抓取最近 30 天歷史紀錄 (最高 1000 筆，以供前端交叉分析)
+    // 2. 抓取最近 30 天歷史紀錄
     const thirtyDaysAgo = new Date(); thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30); thirtyDaysAgo.setHours(0,0,0,0);
     let qHist = supaClient.from('history').select('*').gte('timestamp', thirtyDaysAgo.toISOString()).order('timestamp', {ascending: false}).limit(1000);
     
@@ -172,7 +169,6 @@ async function fetchDashboardStats() {
     document.getElementById('dashTodayIn').innerText = todayIn;
     document.getElementById('dashTodayOut').innerText = todayOut;
 
-    // 🔥 繪製 Recent Movements (顯示擴大為 20 筆，高度加高，字體更清晰)
     document.getElementById('dashHistory').innerHTML = (histData || []).slice(0, 20).map(h => {
         let qtyColor = h.quantity > 0 ? '#107e3e' : (h.quantity < 0 ? '#bb0000' : '#0a6ed1');
         let qtySign = h.quantity > 0 ? '+' : '';
@@ -183,7 +179,6 @@ async function fetchDashboardStats() {
         </div>`;
     }).join('') || '<div style="color:#999; padding:10px;">No Data</div>';
 
-    // 🔥 繪製 Top 5
     const top5 = Object.entries(moveCount).sort((a,b) => b[1] - a[1]).slice(0, 5);
     document.getElementById('dashTop5').innerHTML = top5.map((t, idx) => `
         <div style="border-bottom:1px solid #eee; padding:10px 0; display:flex; align-items:center;">
@@ -193,7 +188,6 @@ async function fetchDashboardStats() {
         </div>
     `).join('') || '<div style="color:#999; padding:10px;">No Movements</div>';
 
-    // 🔥 繪製呆滯料預警 (庫存 > 0 且 30 天內未異動)
     const deadList = Object.values(invMap).filter(i => i.stock > 0 && !moveCount[i.part_number]).sort((a,b) => b.stock - a.stock).slice(0, 10);
     document.getElementById('dashDead').innerHTML = deadList.map(d => `
         <div style="border-bottom:1px solid #eee; padding:10px 0;">
@@ -203,7 +197,6 @@ async function fetchDashboardStats() {
         </div>
     `).join('') || '<div style="color:#107e3e; padding:10px; font-weight:bold;">✅ All stock is moving actively!</div>';
 
-    // 繪製 Chart.js
     updateCharts(critCount, lowCount, safeCount, trendMap);
 }
 
@@ -238,22 +231,6 @@ function updateCharts(crit, low, safe, trendMap) {
         },
         options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top', labels:{boxWidth:12, font:{size:11}} } }, scales: { x: { grid: { display: false } }, y: { border: { display: false }, ticks: { precision: 0 } } } }
     });
-}
-
-    qHist = qHist.limit(10); 
-
-    // 平行加速處理，畫面瞬間更新
-    const [{count: critCount}, {count: lowCount}, {count: totCount}, {data: hist}] = await Promise.all([qCrit, qLow, qTot, qHist]);
-    
-    document.getElementById('dashCrit').innerText = critCount || 0;
-    document.getElementById('dashLow').innerText = lowCount || 0;
-    document.getElementById('dashTotal').innerText = totCount || 0;
-
-    document.getElementById('dashHistory').innerHTML = (hist || []).map(h => {
-        let qtyColor = h.quantity > 0 ? 'green' : (h.quantity < 0 ? 'red' : '#0a6ed1');
-        let qtySign = h.quantity > 0 ? '+' : '';
-        return `<div style="border-bottom:1px solid #eee; padding:5px 0;"><span style="font-weight:bold;">${h.part_number}</span> <span style="float:right; color:${qtyColor}">${qtySign}${h.quantity}</span><div style="font-size:11px; color:#999;">${new Date(h.timestamp).toLocaleDateString()} - ${h.action}</div></div>`;
-    }).join('');
 }
 
 async function fetchInventoryServerSide(resetPage = false) {
