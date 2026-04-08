@@ -1,5 +1,5 @@
 // 強制版本號升級，破除舊快取
-const CACHE_NAME = 'wms-cache-v10';
+const CACHE_NAME = 'wms-cache-v11';
 const urlsToCache = [
   './', 
   './index.html', 
