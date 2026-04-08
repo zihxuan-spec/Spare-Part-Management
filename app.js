@@ -324,7 +324,6 @@ function showToast(msg, err) { const t = document.getElementById('toast'); t.inn
 function showMsg(title, text) { document.getElementById('msgTitle').innerText = title; document.getElementById('msgTitle').style.color = "var(--sap-critical)"; document.getElementById('msgContent').innerText = text; document.querySelector('#msgModal .btn-primary').onclick = () => closeModal('msgModal'); openModal('msgModal'); }
 function switchView(v) { ['Dashboard','Inventory','Master'].forEach(x => { document.getElementById('view'+x).style.display = 'none'; document.getElementById('tab'+(x==='Dashboard'?'Dash':x==='Inventory'?'Inv':'Master')).classList.remove('active'); }); document.getElementById('view'+ (v==='dashboard'?'Dashboard':v==='inventory'?'Inventory':'Master')).style.display = 'block'; document.getElementById('tab'+ (v==='dashboard'?'Dash':v==='inventory'?'Inv':'Master')).classList.add('active'); }
 function openTxModal(type) { currentTxType = type; document.getElementById('txTitle').innerText = type === 'receive' ? i18n[currentLang].btn_po : i18n[currentLang].btn_issue; document.getElementById('txDate').value = new Date().toISOString().split('T')[0]; document.getElementById('txUser').value = currentUserDisplayName; document.getElementById('txRef').value = ""; document.getElementById('txBody').innerHTML = ""; addTxRow(); openModal('txModal'); }
-function addTxRow() { const tr = document.createElement('tr'), isIss = currentTxType === 'issue'; tr.innerHTML = `<td><input type="text" class="tx-input tx-id" onchange="resolvePart(this)"></td><td><input type="text" class="tx-input tx-info" readonly tabindex="-1"></td><td><input type="number" class="tx-input tx-qty"></td><td><input type="text" class="tx-input tx-loc" ${isIss?'readonly tabindex="-1"':''} style="${isIss?'background-color:#f5f5f5; color:#666;':''}"></td><td style="text-align:center; cursor:pointer; color:#ccc;" onclick="this.parentElement.remove()">✕</td>`; document.getElementById('txBody').appendChild(tr); }
 function submitTx() { const lang = i18n[currentLang], ref = document.getElementById('txRef').value.trim(), user = document.getElementById('txUser').value.trim(), rows = document.querySelectorAll('#txBody tr'), items = []; if (!ref || !user) { showMsg(lang.msg_input_required, lang.msg_input_empty); return; } for (let i = 0; i < rows.length; i++) { const id = rows[i].querySelector('.tx-id').value.trim(), qty = Number(rows[i].querySelector('.tx-qty').value.trim()), loc = rows[i].querySelector('.tx-loc').value.trim(); if (!id || isNaN(qty) || qty <= 0) { showMsg(lang.msg_input_required, `Row ${i + 1} invalid`); return; } if (currentTxType === 'receive' && !loc) { showMsg(lang.msg_input_required, `Row ${i + 1} needs Location`); return; } items.push({ id, qty, loc }); } document.getElementById('msgTitle').innerText = lang.confirm_post_title; document.getElementById('msgContent').innerText = lang.confirm_post_body; document.querySelector('#msgModal .btn-primary').onclick = function() { closeModal('msgModal'); executeSubmit(items); }; openModal('msgModal'); }
 
 async function deleteMaster(id) { setLoading(true); const { error } = await supaClient.from('master').delete().eq('part_number', id); setLoading(false); if(!error) { fetchMasterServerSide(); showToast(i18n[currentLang].deleted); } else showMsg("Error", error.message); }
@@ -405,4 +404,114 @@ window.saveLocationInline = async function(partNumber, stock, oldLoc) {
     } finally {
         setLoading(false);
     }
+};
+// --------------------------------------------------------
+// 🔥 升級版：API 雲端智慧下拉選單 (Server-Side Autocomplete)
+// --------------------------------------------------------
+let autocompleteTimer;
+window.handleAutocomplete = function(input) {
+    clearTimeout(autocompleteTimer);
+    const val = input.value.trim();
+    let listDiv = input.nextElementSibling;
+    if (listDiv && listDiv.className === 'autocomplete-list') listDiv.remove();
+    if (!val) return;
+
+    // 延遲 300 毫秒，避免打字太快一直送出請求
+    autocompleteTimer = setTimeout(async () => {
+        const { data, error } = await supaClient.from('master')
+            .select('part_number, model')
+            .or(`part_number.ilike.%${val}%,model.ilike.%${val}%`)
+            .limit(10);
+        
+        if (error || !data || data.length === 0) return;
+
+        listDiv = input.nextElementSibling;
+        if (listDiv && listDiv.className === 'autocomplete-list') listDiv.remove();
+
+        listDiv = document.createElement('div');
+        listDiv.className = 'autocomplete-list';
+        
+        data.forEach(item => {
+            const div = document.createElement('div');
+            div.className = 'autocomplete-item';
+            div.innerHTML = `<strong style="color:var(--sap-primary);">${item.part_number}</strong><br><span style="color:#666;font-size:11px;">${item.model || ''}</span>`;
+            div.onclick = () => {
+                input.value = item.part_number;
+                listDiv.remove();
+                resolvePart(input); // 選取後自動帶出品名與儲位
+            };
+            listDiv.appendChild(div);
+        });
+        
+        input.parentNode.style.position = 'relative';
+        input.parentNode.insertBefore(listDiv, input.nextSibling);
+    }, 300);
+};
+
+// 點擊畫面其他地方時，自動關閉下拉選單
+document.addEventListener('click', function (e) {
+    document.querySelectorAll('.autocomplete-list').forEach(el => {
+        if(e.target !== el.previousElementSibling) el.remove();
+    });
+});
+
+// --------------------------------------------------------
+// 🔥 新增：相機條碼掃描 (Barcode Scanner)
+// --------------------------------------------------------
+let html5QrcodeScanner;
+let currentScanInput = null;
+
+window.openScanner = function(btn) {
+    currentScanInput = btn.previousElementSibling; // 鎖定目前是哪一行的輸入框
+    openModal('scannerModal');
+    
+    html5QrcodeScanner = new Html5Qrcode("reader");
+    const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+    
+    // 啟動後置鏡頭
+    html5QrcodeScanner.start({ facingMode: "environment" }, config, 
+        (decodedText) => {
+            // 掃描成功！填入料號並自動觸發解析
+            if(currentScanInput) {
+                currentScanInput.value = decodedText;
+                resolvePart(currentScanInput);
+            }
+            stopScanner();
+            showToast("成功掃描條碼: " + decodedText);
+        },
+        (errorMessage) => { /* 掃描中未辨識到條碼的背景錯誤，不需處理 */ }
+    ).catch(err => {
+        showMsg("相機錯誤", "無法啟動相機，請確認是否已給予瀏覽器相機權限。");
+        closeModal('scannerModal');
+    });
+};
+
+window.stopScanner = function() {
+    if(html5QrcodeScanner) {
+        html5QrcodeScanner.stop().then(() => {
+            html5QrcodeScanner.clear();
+            closeModal('scannerModal');
+        }).catch(err => closeModal('scannerModal'));
+    } else {
+        closeModal('scannerModal');
+    }
+};
+
+// --------------------------------------------------------
+// 🔄 覆蓋舊的 addTxRow：加入相機按鈕與自動完成事件
+// --------------------------------------------------------
+window.addTxRow = function() { 
+    const tr = document.createElement('tr'), isIss = currentTxType === 'issue'; 
+    tr.innerHTML = `
+        <td style="position:relative;">
+            <div style="display:flex; align-items:center;">
+                <input type="text" class="tx-input tx-id" onkeyup="handleAutocomplete(this)" onchange="resolvePart(this)" placeholder="搜尋 / 掃描..." autocomplete="off">
+                <button class="btn-icon" onclick="openScanner(this)" title="掃描條碼">📷</button>
+            </div>
+        </td>
+        <td><input type="text" class="tx-input tx-info" readonly tabindex="-1"></td>
+        <td><input type="number" class="tx-input tx-qty"></td>
+        <td><input type="text" class="tx-input tx-loc" ${isIss?'readonly tabindex="-1"':''} style="${isIss?'background-color:#f5f5f5; color:#666;':''}"></td>
+        <td style="text-align:center; cursor:pointer; color:#ccc;" onclick="this.parentElement.remove()">✕</td>`; 
+    document.getElementById('txBody').appendChild(tr); 
 };
