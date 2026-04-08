@@ -14,6 +14,8 @@
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
     <link rel="stylesheet" href="style.css">
 </head>
@@ -80,11 +82,37 @@
 
 <div class="content-area">
     <div id="viewDashboard">
-        <div class="dashboard-grid">
-            <div class="card alert" onclick="applyFilter('crit')" title="Click to filter"><div class="card-title" data-i18n="card_crit">Critical Stock</div><div class="card-value" id="dashCrit" style="color:#bb0000">0</div><div class="card-sub" data-i18n="sub_crit">Items Out of Stock</div></div>
-            <div class="card warn" onclick="applyFilter('low')" title="Click to filter"><div class="card-title" data-i18n="card_low">Low Stock</div><div class="card-value" id="dashLow" style="color:#e9730c">0</div><div class="card-sub" data-i18n="sub_low">Items below safety level</div></div>
-            <div class="card safe" onclick="applyFilter('all')" title="Show All"><div class="card-title" data-i18n="card_total">Total Items</div><div class="card-value" id="dashTotal">0</div><div class="card-sub" data-i18n="sub_total">Active SKU Count</div></div>
-            <div class="card" style="cursor: default;"><div class="card-title"><span data-i18n="card_hist">Recent Movements</span><button class="std-btn btn-transparent" style="font-size:12px; padding:2px 8px; height:auto;" onclick="openReportModal()">📊 Report</button></div><div style="font-size:12px; color:#555; max-height:100px; overflow-y:auto;" id="dashHistory"></div></div>
+        <div class="dashboard-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+            <div class="card alert" onclick="applyFilter('crit')" title="Click to filter"><div class="card-title" data-i18n="card_crit">Critical Stock</div><div class="card-value" id="dashCrit" style="color:#bb0000">0</div></div>
+            <div class="card warn" onclick="applyFilter('low')" title="Click to filter"><div class="card-title" data-i18n="card_low">Low Stock</div><div class="card-value" id="dashLow" style="color:#e9730c">0</div></div>
+            <div class="card safe"><div class="card-title" data-i18n="card_today_in">Today's Receipts</div><div class="card-value" id="dashTodayIn" style="color:#107e3e">0</div></div>
+            <div class="card" style="border-left: 5px solid #0a6ed1;"><div class="card-title" data-i18n="card_today_out">Today's Issues</div><div class="card-value" id="dashTodayOut" style="color:#0a6ed1">0</div></div>
+        </div>
+
+        <div class="dashboard-grid" style="grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));">
+            <div class="card">
+                <div class="card-title" data-i18n="chart_health">Inventory Health</div>
+                <div style="position:relative; height:220px; width:100%;"><canvas id="chartHealth"></canvas></div>
+            </div>
+            <div class="card" style="grid-column: span 2 / auto;">
+                <div class="card-title" data-i18n="chart_trend">7-Day Movement Trend</div>
+                <div style="position:relative; height:220px; width:100%;"><canvas id="chartTrend"></canvas></div>
+            </div>
+        </div>
+
+        <div class="dashboard-grid" style="grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); align-items: start;">
+            <div class="card" style="cursor: default;">
+                <div class="card-title"><span data-i18n="card_hist">Recent Movements</span><button class="std-btn btn-transparent" style="font-size:12px; padding:2px 8px; height:auto;" onclick="openReportModal()">📊 Report</button></div>
+                <div style="font-size:13px; color:#555; max-height:280px; overflow-y:auto; padding-right:5px;" id="dashHistory"></div>
+            </div>
+            <div class="card" style="cursor: default;">
+                <div class="card-title" data-i18n="card_top5">🔥 Top 5 Moving (30 Days)</div>
+                <div style="font-size:13px; color:#555; max-height:280px; overflow-y:auto; padding-right:5px;" id="dashTop5"></div>
+            </div>
+            <div class="card" style="cursor: default;">
+                <div class="card-title" data-i18n="card_dead">💤 Dead Stock Warning</div>
+                <div style="font-size:13px; color:#555; max-height:280px; overflow-y:auto; padding-right:5px;" id="dashDead"></div>
+            </div>
         </div>
     </div>
 
