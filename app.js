@@ -15,14 +15,13 @@ let logoutTimer;
 const AUTO_LOGOUT_TIME = 30 * 60 * 1000; 
 
 // 翻譯字庫
-// 翻譯字庫
 const i18n = {
     en: { tab_inv: "Inventory", tab_dash: "Dashboard", tab_master: "Master Data", btn_refresh: "Refresh", btn_po: "Goods Receipt", btn_issue: "Goods Issue", btn_create: "Create Material", col_pn: "Part Number", col_model: "Model", col_desc: "Description", col_loc: "Loc", col_stock: "Stock", col_unit: "Unit", lbl_ref: "PO Number/Reference", lbl_user: "User", lbl_date: "Date", lbl_qty: "Qty", lbl_safe: "Safety Stock", btn_add_line: "Add Line", btn_cancel: "Cancel", btn_post: "Post", btn_save: "Save", btn_close: "Close", btn_ok: "OK", card_crit: "Critical Stock", sub_crit: "Items Out of Stock", card_low: "Low Stock", sub_low: "Below Safety Level", card_total: "Total Items", sub_total: "Active SKU Count", card_hist: "Recent Movements", modal_detail: "Details", txt_display: "Display", btn_logout: "Logout", btn_pwd: "Pwd", lbl_account: "Username", lbl_password: "Password", lbl_name: "Display Name", btn_signin: "Sign In", btn_signup: "Sign Up", btn_change: "Change", txt_new_user: "New User?", link_register: "Register Here", modal_reg_title: "Register Account", modal_cp_title: "Change Password", lbl_old_pass: "Old Password", lbl_new_pass: "New Password", lbl_confirm_pass: "Confirm New", msg_reg_success: "Register Success! Please Login.", msg_pass_changed: "Password Changed! Please login again.", msg_pass_mismatch: "Passwords do not match", msg_fill_all: "All fields required", confirm_post_title: "Post Confirmation", confirm_post_body: "Are you sure you want to post these transactions?", confirm_delete: "Delete this master data?", deleted: "Deleted!", msg_input_required: "Input Required", msg_input_empty: "Please fill in PO/Reference and User field.", txt_page: "Page", txt_of: "of", msg_unknown_title: "Unknown Part", msg_unknown_body: "Part not found in Master Data.",
           ph_search: "Search / Scan...", title_scan: "Scan Barcode", msg_scan_ok: "Scanned: ", err_cam_title: "Camera Error", err_cam_msg: "Cannot access camera. Please check permissions.", modal_scan: "📷 Scan Barcode / QR Code",
-          lbl_dept: "Department", sel_dept: "Select Dept...", msg_sel_dept: "Please assign a department." },
+          lbl_dept: "Department", sel_dept: "Select Dept...", msg_sel_dept: "Please assign a department.", opt_all_dept: "All Depts" },
     zh: { tab_inv: "庫存列表", tab_dash: "管理看板", tab_master: "物料主檔", btn_refresh: "刷新", btn_po: "收貨入庫", btn_issue: "發貨領料", btn_create: "建立物料", col_pn: "料號", col_model: "型號", col_desc: "品名描述", col_loc: "儲位", col_stock: "庫存", col_unit: "單位", lbl_ref: "採購單號/用途", lbl_user: "操作人員", lbl_date: "日期", lbl_qty: "數量", lbl_safe: "安全庫存", btn_add_line: "新增項目", btn_cancel: "取消", btn_post: "過帳", btn_save: "儲存", btn_close: "關閉", btn_ok: "確定", card_crit: "缺料警告", sub_crit: "庫存為 0", card_low: "低庫存", sub_low: "低於安全水位", card_total: "物料總數", sub_total: "系統內 SKU", card_hist: "最近異動", modal_detail: "詳細資訊", txt_display: "查看", btn_logout: "登出", btn_pwd: "密碼", lbl_account: "帳號", lbl_password: "密碼", lbl_name: "顯示名稱", btn_signin: "登入", btn_signup: "註冊", btn_change: "修改", txt_new_user: "還沒帳號?", link_register: "點此註冊", modal_reg_title: "註冊帳號", modal_cp_title: "修改密碼", lbl_old_pass: "舊密碼", lbl_new_pass: "新密碼", lbl_confirm_pass: "確認新密碼", msg_reg_success: "註冊成功！請登入。", msg_pass_changed: "密碼已修改！請重新登入。", msg_pass_mismatch: "新密碼不一致", msg_fill_all: "請填寫所有欄位", confirm_post_title: "過帳確認", confirm_post_body: "您確定要提交這些異動資料嗎？", confirm_delete: "確定要刪除此物料主檔嗎？", deleted: "已刪除！", msg_input_required: "欄位必填", msg_input_empty: "請填寫單號/用途與操作人員欄位。", txt_page: "第", txt_of: "頁 / 共", msg_unknown_title: "未知料號", msg_unknown_body: "在系統主檔中找不到此料號。",
           ph_search: "搜尋 / 掃描...", title_scan: "掃描條碼", msg_scan_ok: "成功掃描: ", err_cam_title: "相機錯誤", err_cam_msg: "無法啟動相機，請確認是否給予權限。", modal_scan: "📷 掃描條碼 / QR Code",
-          lbl_dept: "所屬部門", sel_dept: "請選擇部門...", msg_sel_dept: "請選擇該物料所屬部門" }
+          lbl_dept: "所屬部門", sel_dept: "請選擇部門...", msg_sel_dept: "請選擇該物料所屬部門", opt_all_dept: "全公司 (All)" }
 };
 
 function getTrans(key) { return i18n[currentLang][key] || key; }
@@ -45,11 +44,7 @@ async function doLogin() {
 
 async function checkAutoLogin() {
     const lastActive = sessionStorage.getItem('wms_last_active');
-    if (lastActive && (Date.now() - parseInt(lastActive) > AUTO_LOGOUT_TIME)) {
-        await supaClient.auth.signOut();
-        sessionStorage.removeItem('wms_last_active');
-        return; 
-    }
+    if (lastActive && (Date.now() - parseInt(lastActive) > AUTO_LOGOUT_TIME)) { await supaClient.auth.signOut(); sessionStorage.removeItem('wms_last_active'); return; }
     const { data: { session } } = await supaClient.auth.getSession();
     if (session) {
         const { data: p } = await supaClient.from('profiles').select('username, name, department').eq('id', session.user.id).single();
@@ -66,11 +61,13 @@ function applyLoginState(name, uid, dept) {
     document.getElementById('changePassBtn').style.display = 'block'; 
     document.getElementById('userInfoDisplay').innerText = `${name} (${dept})`;
 
-    // UI 權限控管：非 Admin 隱藏 Master Data 按鈕
+    // 🔥 權限控管：開啟 Admin 的主檔標籤與全域視角切換器
     if (dept === 'Admin') {
         document.getElementById('tabMaster').style.display = 'block';
+        document.getElementById('adminGlobalDept').style.display = 'block';
     } else {
         document.getElementById('tabMaster').style.display = 'none';
+        document.getElementById('adminGlobalDept').style.display = 'none';
         if (document.getElementById('tabMaster').classList.contains('active')) switchView('dashboard');
     }
 
@@ -80,41 +77,33 @@ function applyLoginState(name, uid, dept) {
 
 async function doLogout() { await supaClient.auth.signOut(); sessionStorage.removeItem('wms_last_active'); location.reload(); }
 function clearLoginError() { document.getElementById('loginFeedback').innerText = ""; const btn = document.getElementById('btnLogin'); if(btn.disabled) { btn.disabled = false; btn.innerText = getTrans('btn_signin'); } }
-function resetLogoutTimer() {
-    if (!currentUserName) return; 
-    sessionStorage.setItem('wms_last_active', Date.now());
-    clearTimeout(logoutTimer);
-    logoutTimer = setTimeout(() => { showMsg(currentLang === 'zh' ? "自動登出" : "Auto Logout", currentLang === 'zh' ? "閒置過久，系統已自動登出保護您的資料。" : "Session timed out due to inactivity."); setTimeout(doLogout, 2500); }, AUTO_LOGOUT_TIME);
-}
+function resetLogoutTimer() { if (!currentUserName) return; sessionStorage.setItem('wms_last_active', Date.now()); clearTimeout(logoutTimer); logoutTimer = setTimeout(() => { showMsg(currentLang === 'zh' ? "自動登出" : "Auto Logout", currentLang === 'zh' ? "閒置過久，系統已自動登出保護您的資料。" : "Session timed out due to inactivity."); setTimeout(doLogout, 2500); }, AUTO_LOGOUT_TIME); }
 ['mousemove', 'keydown', 'click', 'touchstart'].forEach(evt => { document.addEventListener(evt, resetLogoutTimer); });
 
 async function doRegister() {
     const u = document.getElementById('regUser').value.trim(), p = document.getElementById('regPass').value.trim(), n = document.getElementById('regName').value.trim();
     if(!u || !p || !n) { showToast(getTrans('msg_fill_all'), true); return; }
     if(p.length < 6) { showToast("Password minimum 6 characters", true); return; } 
-    setLoading(true);
-    const { data, error } = await supaClient.auth.signUp({ email: u + VIRTUAL_DOMAIN, password: p, options: { data: { username: u, name: n } } });
-    setLoading(false);
-    if(!error) { await supaClient.auth.signOut(); closeModal('registerModal'); showMsg("Registration Sent", currentLang === 'en' ? "Registration sent! Your account is 'Pending'." : "申請已送出！您的帳號目前為 '待審核' 狀態。"); } 
-    else { showMsg("Error", error.message); }
+    setLoading(true); const { data, error } = await supaClient.auth.signUp({ email: u + VIRTUAL_DOMAIN, password: p, options: { data: { username: u, name: n } } }); setLoading(false);
+    if(!error) { await supaClient.auth.signOut(); closeModal('registerModal'); showMsg("Registration Sent", currentLang === 'en' ? "Registration sent! Your account is 'Pending'." : "申請已送出！您的帳號目前為 '待審核' 狀態。"); } else { showMsg("Error", error.message); }
 }
 
 async function doChangePass() {
     const newP = document.getElementById('cpNew').value.trim(), confP = document.getElementById('cpConfirm').value.trim();
-    if(!newP || !confP) { showToast(getTrans('msg_fill_all'), true); return; }
-    if(newP !== confP) { showToast(getTrans('msg_pass_mismatch'), true); return; }
-    if(newP.length < 6) { showToast("Password minimum 6 characters", true); return; }
-    setLoading(true);
-    const { error } = await supaClient.auth.updateUser({ password: newP });
-    setLoading(false);
-    if(!error) { showToast(getTrans('msg_pass_changed')); closeModal('changePassModal'); setTimeout(() => { doLogout(); }, 1500); } 
-    else { showMsg("Error", error.message); }
+    if(!newP || !confP) { showToast(getTrans('msg_fill_all'), true); return; } if(newP !== confP) { showToast(getTrans('msg_pass_mismatch'), true); return; } if(newP.length < 6) { showToast("Password minimum 6 characters", true); return; }
+    setLoading(true); const { error } = await supaClient.auth.updateUser({ password: newP }); setLoading(false);
+    if(!error) { showToast(getTrans('msg_pass_changed')); closeModal('changePassModal'); setTimeout(() => { doLogout(); }, 1500); } else { showMsg("Error", error.message); }
 }
 
 function openRegister() { ['regUser','regPass','regName'].forEach(id => { if(document.getElementById(id)) document.getElementById(id).value = ""; }); openModal('registerModal'); }
 function openChangePass() { ['cpOld','cpNew','cpConfirm'].forEach(id => { if(document.getElementById(id)) document.getElementById(id).value = ""; }); openModal('changePassModal'); }
 
 // 3. Server-Side 大數據與即時監聽 
+// 🔥 取出當前目標部門的輔助函數
+function getTargetDept() {
+    return currentUserDept === 'Admin' ? document.getElementById('adminGlobalDept').value : currentUserDept;
+}
+
 function setupRealtime() {
     supaClient.channel('wms-realtime')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'inventory' }, payload => { showToast('🔄 庫存有異動，即時更新中...'); fetchDashboardStats(); fetchInventoryServerSide(); })
@@ -125,29 +114,40 @@ function setupRealtime() {
 
 function fetchData() { fetchDashboardStats(); fetchInventoryServerSide(true); fetchMasterServerSide(true); }
 
-// 🔥 加入部門過濾器 (Dashboard)
+// 🔥 終極版 Dashboard 讀取 (支援 Admin 無縫切換部門)
 async function fetchDashboardStats() {
+    const target = getTargetDept();
+    
     let qCrit = supaClient.from('view_inventory').select('*', {count: 'exact', head: true}).eq('is_critical', true);
     let qLow  = supaClient.from('view_inventory').select('*', {count: 'exact', head: true}).eq('is_low', true);
     let qTot  = supaClient.from('view_inventory').select('*', {count: 'exact', head: true});
+    let qHist = supaClient.from('history').select('*').order('timestamp', {ascending: false});
 
-    // 非 Admin 只能計算自己部門的數量
-    if (currentUserDept !== 'Admin') {
-        qCrit = qCrit.eq('department', currentUserDept);
-        qLow  = qLow.eq('department', currentUserDept);
-        qTot  = qTot.eq('department', currentUserDept);
+    // 如果不是看全公司，就要加上過濾器
+    if (target !== 'All' && target !== 'Admin') {
+        qCrit = qCrit.eq('department', target);
+        qLow  = qLow.eq('department', target);
+        qTot  = qTot.eq('department', target);
+        
+        // 歷史紀錄的過濾魔法 (免新建 View，直接透過 master 的料號比對)
+        const { data: deptParts } = await supaClient.from('master').select('part_number').eq('department', target);
+        const partList = deptParts ? deptParts.map(p => p.part_number) : [];
+        if (partList.length > 0) {
+            qHist = qHist.in('part_number', partList);
+        } else {
+            qHist = qHist.eq('part_number', 'NO_MATCH_DUMMY'); 
+        }
     }
 
-    const {count: critCount} = await qCrit;
-    const {count: lowCount}  = await qLow;
-    const {count: totCount}  = await qTot;
+    qHist = qHist.limit(10); 
+
+    // 平行加速處理，畫面瞬間更新
+    const [{count: critCount}, {count: lowCount}, {count: totCount}, {data: hist}] = await Promise.all([qCrit, qLow, qTot, qHist]);
     
     document.getElementById('dashCrit').innerText = critCount || 0;
     document.getElementById('dashLow').innerText = lowCount || 0;
     document.getElementById('dashTotal').innerText = totCount || 0;
 
-    // 歷史紀錄依然靠 RLS 保護
-    const {data: hist} = await supaClient.from('history').select('*').order('timestamp', {ascending: false}).limit(10);
     document.getElementById('dashHistory').innerHTML = (hist || []).map(h => {
         let qtyColor = h.quantity > 0 ? 'green' : (h.quantity < 0 ? 'red' : '#0a6ed1');
         let qtySign = h.quantity > 0 ? '+' : '';
@@ -155,16 +155,12 @@ async function fetchDashboardStats() {
     }).join('');
 }
 
-// 🔥 加入部門過濾器 (Inventory 列表)
 async function fetchInventoryServerSide(resetPage = false) {
     if(resetPage) curPageInv = 1; setLoading(true);
     try {
         let query = supaClient.from('view_inventory').select('*', { count: 'exact' });
-        
-        // 非 Admin 只能撈自己部門的庫存
-        if (currentUserDept !== 'Admin') {
-            query = query.eq('department', currentUserDept);
-        }
+        const target = getTargetDept();
+        if (target !== 'All' && target !== 'Admin') query = query.eq('department', target);
 
         const term = document.getElementById('searchInv').value.trim();
         if(term) query = query.or(`part_number.ilike.%${term}%,model.ilike.%${term}%,description.ilike.%${term}%`);
@@ -181,16 +177,12 @@ async function fetchInventoryServerSide(resetPage = false) {
     } catch(e) { console.error(e); } finally { setLoading(false); }
 }
 
-// 🔥 加入部門過濾器 (Master Data 列表)
 async function fetchMasterServerSide(resetPage = false) {
     if(resetPage) curPageMaster = 1; setLoading(true);
     try {
         let query = supaClient.from('master').select('*', { count: 'exact' });
-
-        // 非 Admin 只能撈自己部門的主檔
-        if (currentUserDept !== 'Admin') {
-            query = query.eq('department', currentUserDept);
-        }
+        const target = getTargetDept();
+        if (target !== 'All' && target !== 'Admin') query = query.eq('department', target);
 
         const term = document.getElementById('searchMaster').value.trim();
         if(term) query = query.or(`part_number.ilike.%${term}%,model.ilike.%${term}%,description.ilike.%${term}%`);
@@ -293,20 +285,21 @@ async function executeSubmit(items) {
     } catch(e) { showMsg("Transaction Failed", e.message || "Unknown Error"); } finally { setLoading(false); }
 }
 
-// 🔥 Excel 匯出也加入部門防護
 async function exportToExcel(type) {
     setLoading(true);
     try {
         let data = [], filename = "";
+        const target = getTargetDept();
+        
         if (type === 'inventory') {
             let query = supaClient.from('view_inventory').select('*');
-            if (currentUserDept !== 'Admin') query = query.eq('department', currentUserDept);
+            if (target !== 'All' && target !== 'Admin') query = query.eq('department', target);
             const { data: dbData } = await query;
             data = dbData.map(i => ({ "Part Number": i.part_number, "Model": i.model, "Description": i.description, "Location": i.location, "Stock": i.stock, "Unit": i.unit, "Main Stock": i.main_stock }));
             filename = "Inventory_List.xlsx";
         } else {
             let query = supaClient.from('master').select('*');
-            if (currentUserDept !== 'Admin') query = query.eq('department', currentUserDept);
+            if (target !== 'All' && target !== 'Admin') query = query.eq('department', target);
             const { data: dbData } = await query;
             data = dbData.map(k => ({ "Part Number": k.part_number, "Model": k.model, "Description": k.description, "Unit": k.unit, "Main Stock": k.main_stock }));
             filename = "Master_Data.xlsx";
@@ -342,41 +335,10 @@ function openTxModal(type) { currentTxType = type; document.getElementById('txTi
 function submitTx() { const lang = i18n[currentLang], ref = document.getElementById('txRef').value.trim(), user = document.getElementById('txUser').value.trim(), rows = document.querySelectorAll('#txBody tr'), items = []; if (!ref || !user) { showMsg(lang.msg_input_required, lang.msg_input_empty); return; } for (let i = 0; i < rows.length; i++) { const id = rows[i].querySelector('.tx-id').value.trim(), qty = Number(rows[i].querySelector('.tx-qty').value.trim()), loc = rows[i].querySelector('.tx-loc').value.trim(); if (!id || isNaN(qty) || qty <= 0) { showMsg(lang.msg_input_required, `Row ${i + 1} invalid`); return; } if (currentTxType === 'receive' && !loc) { showMsg(lang.msg_input_required, `Row ${i + 1} needs Location`); return; } items.push({ id, qty, loc }); } document.getElementById('msgTitle').innerText = lang.confirm_post_title; document.getElementById('msgContent').innerText = lang.confirm_post_body; document.querySelector('#msgModal .btn-primary').onclick = function() { closeModal('msgModal'); executeSubmit(items); }; openModal('msgModal'); }
 
 async function deleteMaster(id) { setLoading(true); const { error } = await supaClient.from('master').delete().eq('part_number', id); setLoading(false); if(!error) { fetchMasterServerSide(); showToast(i18n[currentLang].deleted); } else showMsg("Error", error.message); }
-async function submitCreateMaster() { 
-    const id = document.getElementById('newId').value.trim(), 
-          model = document.getElementById('newModel').value, 
-          desc = document.getElementById('newDesc').value, 
-          unit = document.getElementById('newUnit').value, 
-          min = document.getElementById('newMinStock').value, 
-          dept = document.getElementById('newDept').value; 
-    
-    if(!id) { showToast("ID Required", true); return; } 
-    // 🔥 防呆機制：如果沒選部門就不給建檔
-    if(!dept) { showToast(i18n[currentLang].msg_sel_dept, true); return; } 
-
-    setLoading(true); 
-    const { error } = await supaClient.from('master').insert([{ part_number: id, model, description: desc, unit, main_stock: min, department: dept }]); 
-    setLoading(false); 
-    
-    if(!error) { 
-        fetchMasterServerSide(); 
-        closeModal('createModal'); 
-        showToast("Created!"); 
-    } else {
-        showMsg("Error", error.message); 
-    }
-}
-function openCreateMasterModal() { 
-    ['newId','newModel','newDesc','newUnit'].forEach(id => document.getElementById(id).value = ""); 
-    document.getElementById('newMinStock').value = 0; 
-    // 🔥 每次打開視窗時，把部門下拉選單歸零，強迫 Admin 重新選擇
-    document.getElementById('newDept').value = ""; 
-    document.getElementById('newUser').value = currentUserDisplayName; 
-    document.getElementById('masterFeedback').innerText = ""; 
-    openModal('createModal'); 
-}
+async function submitCreateMaster() { const id = document.getElementById('newId').value.trim(), model = document.getElementById('newModel').value, desc = document.getElementById('newDesc').value, unit = document.getElementById('newUnit').value, min = document.getElementById('newMinStock').value, dept = document.getElementById('newDept').value; if(!id) { showToast("ID Required", true); return; } if(!dept) { showToast(i18n[currentLang].msg_sel_dept, true); return; } setLoading(true); const { error } = await supaClient.from('master').insert([{ part_number: id, model, description: desc, unit, main_stock: min, department: dept }]); setLoading(false); if(!error) { fetchMasterServerSide(); closeModal('createModal'); showToast("Created!"); } else showMsg("Error", error.message); }
+function openCreateMasterModal() { ['newId','newModel','newDesc','newUnit'].forEach(id => document.getElementById(id).value = ""); document.getElementById('newMinStock').value = 0; document.getElementById('newDept').value = ""; document.getElementById('newUser').value = currentUserDisplayName; document.getElementById('masterFeedback').innerText = ""; openModal('createModal'); }
 function openReportModal() { const now = new Date(), y = now.getFullYear(), m = String(now.getMonth() + 1).padStart(2, '0'), d = String(now.getDate()).padStart(2, '0'); document.getElementById('rptStart').value = `${y}-${m}-01`; document.getElementById('rptEnd').value = `${y}-${m}-${d}`; openModal('reportModal'); }
-async function downloadReport() { const start = document.getElementById('rptStart').value, end = document.getElementById('rptEnd').value; if(!start || !end) { showToast("Select dates!", true); return; } setLoading(true); const endDay = new Date(end); endDay.setDate(endDay.getDate() + 1); const { data, error } = await supaClient.from('history').select('timestamp, reference, action, part_number, quantity, operator_user, note').gte('timestamp', start).lt('timestamp', endDay.toISOString()); setLoading(false); if(error) showMsg("Error", error.message); else if(!data || data.length === 0) showMsg("No Data", "No movements found."); else { const ws = XLSX.utils.json_to_sheet(data); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Report"); XLSX.writeFile(wb, `Report_${start}_to_${end}.xlsx`); closeModal('reportModal'); } }
+async function downloadReport() { const start = document.getElementById('rptStart').value, end = document.getElementById('rptEnd').value; if(!start || !end) { showToast("Select dates!", true); return; } setLoading(true); const endDay = new Date(end); endDay.setDate(endDay.getDate() + 1); const target = getTargetDept(); let query = supaClient.from('history').select('timestamp, reference, action, part_number, quantity, operator_user, note').gte('timestamp', start).lt('timestamp', endDay.toISOString()); if (target !== 'All' && target !== 'Admin') { const { data: deptParts } = await supaClient.from('master').select('part_number').eq('department', target); const partList = deptParts ? deptParts.map(p => p.part_number) : []; if (partList.length > 0) query = query.in('part_number', partList); else query = query.eq('part_number', 'NO_MATCH_DUMMY'); } const { data, error } = await query; setLoading(false); if(error) showMsg("Error", error.message); else if(!data || data.length === 0) showMsg("No Data", "No movements found."); else { const ws = XLSX.utils.json_to_sheet(data); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Report"); XLSX.writeFile(wb, `Report_${start}_to_${end}.xlsx`); closeModal('reportModal'); } }
 
 window.editLocationInline = function(partNumber, stock, oldLoc) {
     const locDiv = document.getElementById('detLoc');
@@ -422,8 +384,8 @@ window.handleAutocomplete = function(input) {
 
     autocompleteTimer = setTimeout(async () => {
         let query = supaClient.from('master').select('part_number, model');
-        // 🔥 自動選單也要防護
-        if (currentUserDept !== 'Admin') query = query.eq('department', currentUserDept);
+        const target = getTargetDept();
+        if (target !== 'All' && target !== 'Admin') query = query.eq('department', target);
         
         const { data, error } = await query.or(`part_number.ilike.%${val}%,model.ilike.%${val}%`).limit(10);
         
