@@ -14,7 +14,7 @@ let sortCol = '', sortAsc = true, currentFilter = 'all';
 let logoutTimer;
 const AUTO_LOGOUT_TIME = 30 * 60 * 1000; // 30 分鐘
 
-// 翻譯字庫 (補上遺失的錯誤提示翻譯)
+// 翻譯字庫
 const i18n = {
     en: { tab_inv: "Inventory", tab_dash: "Dashboard", tab_master: "Master Data", btn_refresh: "Refresh", btn_po: "Goods Receipt", btn_issue: "Goods Issue", btn_create: "Create Material", col_pn: "Part Number", col_model: "Model", col_desc: "Description", col_loc: "Loc", col_stock: "Stock", col_unit: "Unit", lbl_ref: "PO Number/Reference", lbl_user: "User", lbl_date: "Date", lbl_qty: "Qty", lbl_safe: "Safety Stock", btn_add_line: "Add Line", btn_cancel: "Cancel", btn_post: "Post", btn_save: "Save", btn_close: "Close", btn_ok: "OK", card_crit: "Critical Stock", sub_crit: "Items Out of Stock", card_low: "Low Stock", sub_low: "Below Safety Level", card_total: "Total Items", sub_total: "Active SKU Count", card_hist: "Recent Movements", modal_detail: "Details", txt_display: "Display", btn_logout: "Logout", btn_pwd: "Pwd", lbl_account: "Username", lbl_password: "Password", lbl_name: "Display Name", btn_signin: "Sign In", btn_signup: "Sign Up", btn_change: "Change", txt_new_user: "New User?", link_register: "Register Here", modal_reg_title: "Register Account", modal_cp_title: "Change Password", lbl_old_pass: "Old Password", lbl_new_pass: "New Password", lbl_confirm_pass: "Confirm New", msg_reg_success: "Register Success! Please Login.", msg_pass_changed: "Password Changed! Please login again.", msg_pass_mismatch: "Passwords do not match", msg_fill_all: "All fields required", confirm_post_title: "Post Confirmation", confirm_post_body: "Are you sure you want to post these transactions?", confirm_delete: "Delete this master data?", deleted: "Deleted!", msg_input_required: "Input Required", msg_input_empty: "Please fill in PO/Reference and User field.", txt_page: "Page", txt_of: "of", msg_unknown_title: "Unknown Part", msg_unknown_body: "Part not found in Master Data." },
     zh: { tab_inv: "庫存列表", tab_dash: "管理看板", tab_master: "物料主檔", btn_refresh: "刷新", btn_po: "收貨入庫", btn_issue: "發貨領料", btn_create: "建立物料", col_pn: "料號", col_model: "型號", col_desc: "品名描述", col_loc: "儲位", col_stock: "庫存", col_unit: "單位", lbl_ref: "採購單號/用途", lbl_user: "操作人員", lbl_date: "日期", lbl_qty: "數量", lbl_safe: "安全庫存", btn_add_line: "新增項目", btn_cancel: "取消", btn_post: "過帳", btn_save: "儲存", btn_close: "關閉", btn_ok: "確定", card_crit: "缺料警告", sub_crit: "庫存為 0", card_low: "低庫存", sub_low: "低於安全水位", card_total: "物料總數", sub_total: "系統內 SKU", card_hist: "最近異動", modal_detail: "詳細資訊", txt_display: "查看", btn_logout: "登出", btn_pwd: "密碼", lbl_account: "帳號", lbl_password: "密碼", lbl_name: "顯示名稱", btn_signin: "登入", btn_signup: "註冊", btn_change: "修改", txt_new_user: "還沒帳號?", link_register: "點此註冊", modal_reg_title: "註冊帳號", modal_cp_title: "修改密碼", lbl_old_pass: "舊密碼", lbl_new_pass: "新密碼", lbl_confirm_pass: "確認新密碼", msg_reg_success: "註冊成功！請登入。", msg_pass_changed: "密碼已修改！請重新登入。", msg_pass_mismatch: "新密碼不一致", msg_fill_all: "請填寫所有欄位", confirm_post_title: "過帳確認", confirm_post_body: "您確定要提交這些異動資料嗎？", confirm_delete: "確定要刪除此物料主檔嗎？", deleted: "已刪除！", msg_input_required: "欄位必填", msg_input_empty: "請填寫單號/用途與操作人員欄位。", txt_page: "第", txt_of: "頁 / 共", msg_unknown_title: "未知料號", msg_unknown_body: "在系統主檔中找不到此料號。" }
@@ -133,7 +133,6 @@ function setupRealtime() {
             showToast('🔄 庫存有異動，即時更新中...'); fetchDashboardStats(); fetchInventoryServerSide();
         })
         .on('postgres_changes', { event: '*', schema: 'public', table: 'history' }, payload => { fetchDashboardStats(); })
-        // 加入 master 表格的即時監聽，新增料號時大家都能立刻看到
         .on('postgres_changes', { event: '*', schema: 'public', table: 'master' }, payload => { fetchMasterServerSide(); })
         .subscribe();
 }
@@ -150,7 +149,11 @@ async function fetchDashboardStats() {
     document.getElementById('dashTotal').innerText = totCount || 0;
 
     const {data: hist} = await supaClient.from('history').select('*').order('timestamp', {ascending: false}).limit(10);
-    document.getElementById('dashHistory').innerHTML = (hist || []).map(h => `<div style="border-bottom:1px solid #eee; padding:5px 0;"><span style="font-weight:bold;">${h.part_number}</span> <span style="float:right; color:${h.quantity>0?'green':'red'}">${h.quantity>0?'+':''}${h.quantity}</span><div style="font-size:11px; color:#999;">${new Date(h.timestamp).toLocaleDateString()} - ${h.action}</div></div>`).join('');
+    document.getElementById('dashHistory').innerHTML = (hist || []).map(h => {
+        let qtyColor = h.quantity > 0 ? 'green' : (h.quantity < 0 ? 'red' : '#0a6ed1');
+        let qtySign = h.quantity > 0 ? '+' : '';
+        return `<div style="border-bottom:1px solid #eee; padding:5px 0;"><span style="font-weight:bold;">${h.part_number}</span> <span style="float:right; color:${qtyColor}">${qtySign}${h.quantity}</span><div style="font-size:11px; color:#999;">${new Date(h.timestamp).toLocaleDateString()} - ${h.action}</div></div>`;
+    }).join('');
 }
 
 async function fetchInventoryServerSide(resetPage = false) {
@@ -228,10 +231,31 @@ function renderMasterTableHTML(dataList, totalCount) {
     updatePagination('masterPagination', curPageMaster, totalPages, totalCount, 'changeMasterPage');
 }
 
+// 🔥 重新設計的儲位無縫編輯與歷史渲染
 async function openDetailsObj(item) {
-    document.getElementById('detId').innerText = item.part_number; document.getElementById('detModel').innerText = item.model; document.getElementById('detDesc').innerText = item.description; document.getElementById('detStock').innerText = item.stock; document.getElementById('detLoc').innerText = item.location || "None";
+    document.getElementById('detId').innerText = item.part_number; 
+    document.getElementById('detModel').innerText = item.model; 
+    document.getElementById('detDesc').innerText = item.description; 
+    document.getElementById('detStock').innerText = item.stock; 
+    
+    // 將儲位變成可點擊的編輯按鈕
+    const safeLoc = item.location ? item.location.replace(/'/g, "\\'") : "";
+    document.getElementById('detLoc').innerHTML = `
+        <span style="cursor:pointer; display:inline-flex; align-items:center; gap:4px; transition:0.2s;" 
+              onmouseover="this.style.opacity=0.7" onmouseout="this.style.opacity=1" 
+              onclick="editLocationInline('${item.part_number}', ${item.stock}, '${safeLoc}')" 
+              title="${currentLang === 'zh' ? '點擊修改儲位' : 'Click to edit location'}">
+              ${item.location || "None"} <span style="font-size:12px; opacity:0.8;">✏️</span>
+        </span>`;
+
     const { data: hList } = await supaClient.from('history').select('*').eq('part_number', item.part_number).order('timestamp', { ascending: false }).limit(20);
-    document.getElementById('detHistory').innerHTML = hList && hList.length ? hList.map(h => `<div style="border-bottom:1px solid #eee; padding:8px 0;"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;"><span style="font-weight:600; font-size:13px; color:#333;">${h.action} <span style="color:${h.quantity > 0 ? '#107e3e' : '#bb0000'}">(${h.quantity > 0 ? '+' : ''}${h.quantity})</span></span><span style="font-size:11px; color:#888;">${new Date(h.timestamp).toLocaleDateString()}</span></div><div style="display:flex; justify-content:space-between; font-size:12px; color:#666;"><span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:180px;">📄 ${h.reference || '-'}</span><span>👤 ${h.operator_user}</span></div></div>`).join('') : '<div style="text-align:center; padding:10px; color:#999;">No History</div>';
+    document.getElementById('detHistory').innerHTML = hList && hList.length ? hList.map(h => {
+        // 修正數量為 0 時的顏色顯示為藍色 (代表中性操作如儲位變更)
+        let qtyColor = h.quantity > 0 ? '#107e3e' : (h.quantity < 0 ? '#bb0000' : '#0a6ed1');
+        let qtySign = h.quantity > 0 ? '+' : '';
+        return `<div style="border-bottom:1px solid #eee; padding:8px 0;"><div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;"><span style="font-weight:600; font-size:13px; color:#333;">${h.action} <span style="color:${qtyColor}">(${qtySign}${h.quantity})</span></span><span style="font-size:11px; color:#888;">${new Date(h.timestamp).toLocaleDateString()}</span></div><div style="display:flex; justify-content:space-between; font-size:12px; color:#666;"><span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:180px;">📄 ${h.reference || '-'}</span><span>👤 ${h.operator_user}</span></div></div>`;
+    }).join('') : '<div style="text-align:center; padding:10px; color:#999;">No History</div>';
+    
     openModal('detailsModal');
 }
 
@@ -277,7 +301,6 @@ async function exportToExcel(type) {
     } finally { setLoading(false); }
 }
 
-// 🔥 修復防呆檢查機制
 async function checkMasterExists() { 
     const id = document.getElementById('newId').value.trim();
     const fb = document.getElementById('masterFeedback');
@@ -304,10 +327,82 @@ function openTxModal(type) { currentTxType = type; document.getElementById('txTi
 function addTxRow() { const tr = document.createElement('tr'), isIss = currentTxType === 'issue'; tr.innerHTML = `<td><input type="text" class="tx-input tx-id" onchange="resolvePart(this)"></td><td><input type="text" class="tx-input tx-info" readonly tabindex="-1"></td><td><input type="number" class="tx-input tx-qty"></td><td><input type="text" class="tx-input tx-loc" ${isIss?'readonly tabindex="-1"':''} style="${isIss?'background-color:#f5f5f5; color:#666;':''}"></td><td style="text-align:center; cursor:pointer; color:#ccc;" onclick="this.parentElement.remove()">✕</td>`; document.getElementById('txBody').appendChild(tr); }
 function submitTx() { const lang = i18n[currentLang], ref = document.getElementById('txRef').value.trim(), user = document.getElementById('txUser').value.trim(), rows = document.querySelectorAll('#txBody tr'), items = []; if (!ref || !user) { showMsg(lang.msg_input_required, lang.msg_input_empty); return; } for (let i = 0; i < rows.length; i++) { const id = rows[i].querySelector('.tx-id').value.trim(), qty = Number(rows[i].querySelector('.tx-qty').value.trim()), loc = rows[i].querySelector('.tx-loc').value.trim(); if (!id || isNaN(qty) || qty <= 0) { showMsg(lang.msg_input_required, `Row ${i + 1} invalid`); return; } if (currentTxType === 'receive' && !loc) { showMsg(lang.msg_input_required, `Row ${i + 1} needs Location`); return; } items.push({ id, qty, loc }); } document.getElementById('msgTitle').innerText = lang.confirm_post_title; document.getElementById('msgContent').innerText = lang.confirm_post_body; document.querySelector('#msgModal .btn-primary').onclick = function() { closeModal('msgModal'); executeSubmit(items); }; openModal('msgModal'); }
 
-// 🔥 修復：建立與刪除後，呼叫新的 Server-Side 渲染函數
 async function deleteMaster(id) { setLoading(true); const { error } = await supaClient.from('master').delete().eq('part_number', id); setLoading(false); if(!error) { fetchMasterServerSide(); showToast(i18n[currentLang].deleted); } else showMsg("Error", error.message); }
 async function submitCreateMaster() { const id = document.getElementById('newId').value.trim(), model = document.getElementById('newModel').value, desc = document.getElementById('newDesc').value, unit = document.getElementById('newUnit').value, min = document.getElementById('newMinStock').value, dept = document.getElementById('newDept').value; if(!id) { showToast("ID Required", true); return; } setLoading(true); const { error } = await supaClient.from('master').insert([{ part_number: id, model, description: desc, unit, main_stock: min, department: dept }]); setLoading(false); if(!error) { fetchMasterServerSide(); closeModal('createModal'); showToast("Created!"); } else showMsg("Error", error.message); }
-
 function openCreateMasterModal() { ['newId','newModel','newDesc','newUnit'].forEach(id => document.getElementById(id).value = ""); document.getElementById('newMinStock').value = 0; document.getElementById('newDept').value = currentUserDept || "Pending"; document.getElementById('newUser').value = currentUserDisplayName; document.getElementById('masterFeedback').innerText = ""; openModal('createModal'); }
 function openReportModal() { const now = new Date(), y = now.getFullYear(), m = String(now.getMonth() + 1).padStart(2, '0'), d = String(now.getDate()).padStart(2, '0'); document.getElementById('rptStart').value = `${y}-${m}-01`; document.getElementById('rptEnd').value = `${y}-${m}-${d}`; openModal('reportModal'); }
 async function downloadReport() { const start = document.getElementById('rptStart').value, end = document.getElementById('rptEnd').value; if(!start || !end) { showToast("Select dates!", true); return; } setLoading(true); const endDay = new Date(end); endDay.setDate(endDay.getDate() + 1); const { data, error } = await supaClient.from('history').select('timestamp, reference, action, part_number, quantity, operator_user, note').gte('timestamp', start).lt('timestamp', endDay.toISOString()); setLoading(false); if(error) showMsg("Error", error.message); else if(!data || data.length === 0) showMsg("No Data", "No movements found."); else { const ws = XLSX.utils.json_to_sheet(data); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Report"); XLSX.writeFile(wb, `Report_${start}_to_${end}.xlsx`); closeModal('reportModal'); } }
+
+// --------------------------------------------------------
+// 🔥 新增：獨立的儲位修改邏輯 (Inline Edit)
+// --------------------------------------------------------
+window.editLocationInline = function(partNumber, stock, oldLoc) {
+    const locDiv = document.getElementById('detLoc');
+    // 變身成輸入框與確認/取消按鈕
+    locDiv.innerHTML = `
+        <div style="display:flex; align-items:center; gap:5px;">
+            <input type="text" id="inlineLocInput" value="${oldLoc}" 
+                   style="width:70px; font-size:14px; text-align:center; border:1px solid #0a6ed1; border-radius:4px; outline:none; padding:2px;">
+            <span style="cursor:pointer; color:#107e3e; font-size:16px; line-height:1;" 
+                  onclick="saveLocationInline('${partNumber}', ${stock}, '${oldLoc}')" title="Save">✔️</span>
+            <span style="cursor:pointer; color:#bb0000; font-size:16px; line-height:1;" 
+                  onclick="cancelLocationInline('${partNumber}', ${stock}, '${oldLoc}')" title="Cancel">❌</span>
+        </div>`;
+    document.getElementById('inlineLocInput').focus();
+};
+
+window.cancelLocationInline = function(partNumber, stock, oldLoc) {
+    // 透過重新渲染 Details Modal 來取消編輯
+    openDetailsObj({
+        part_number: partNumber,
+        model: document.getElementById('detModel').innerText,
+        description: document.getElementById('detDesc').innerText,
+        stock: stock,
+        location: oldLoc
+    });
+};
+
+window.saveLocationInline = async function(partNumber, stock, oldLoc) {
+    let newLoc = document.getElementById('inlineLocInput').value.trim();
+    if (newLoc === oldLoc) {
+        cancelLocationInline(partNumber, stock, oldLoc);
+        return;
+    }
+
+    setLoading(true);
+    try {
+        // 1. 寫入 Inventory 表格 (若無庫存紀錄則自動新增 0 庫存資料)
+        const { data: invData } = await supaClient.from('inventory').select('stock').eq('part_number', partNumber).maybeSingle();
+        if (invData) {
+            await supaClient.from('inventory').update({ location: newLoc }).eq('part_number', partNumber);
+        } else {
+            await supaClient.from('inventory').insert({ part_number: partNumber, location: newLoc, stock: 0 });
+        }
+
+        // 2. 寫入 History 歷史紀錄 (數量為 0，純留底)
+        await supaClient.from('history').insert({
+            part_number: partNumber,
+            action: currentLang === 'zh' ? "儲位變更" : "Location Change",
+            quantity: 0,
+            reference: `${oldLoc || 'None'} ➔ ${newLoc || 'None'}`,
+            operator_user: currentUserDisplayName
+        });
+
+        showToast(currentLang === 'zh' ? "儲位已更新！" : "Location Updated!");
+
+        // 3. 重新抓取並打開最新的 Details Modal
+        openDetailsObj({
+            part_number: partNumber,
+            model: document.getElementById('detModel').innerText,
+            description: document.getElementById('detDesc').innerText,
+            stock: stock,
+            location: newLoc
+        });
+
+    } catch (e) {
+        showMsg("Error", e.message);
+        cancelLocationInline(partNumber, stock, oldLoc);
+    } finally {
+        setLoading(false);
+    }
+};
