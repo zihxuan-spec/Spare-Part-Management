@@ -342,8 +342,39 @@ function openTxModal(type) { currentTxType = type; document.getElementById('txTi
 function submitTx() { const lang = i18n[currentLang], ref = document.getElementById('txRef').value.trim(), user = document.getElementById('txUser').value.trim(), rows = document.querySelectorAll('#txBody tr'), items = []; if (!ref || !user) { showMsg(lang.msg_input_required, lang.msg_input_empty); return; } for (let i = 0; i < rows.length; i++) { const id = rows[i].querySelector('.tx-id').value.trim(), qty = Number(rows[i].querySelector('.tx-qty').value.trim()), loc = rows[i].querySelector('.tx-loc').value.trim(); if (!id || isNaN(qty) || qty <= 0) { showMsg(lang.msg_input_required, `Row ${i + 1} invalid`); return; } if (currentTxType === 'receive' && !loc) { showMsg(lang.msg_input_required, `Row ${i + 1} needs Location`); return; } items.push({ id, qty, loc }); } document.getElementById('msgTitle').innerText = lang.confirm_post_title; document.getElementById('msgContent').innerText = lang.confirm_post_body; document.querySelector('#msgModal .btn-primary').onclick = function() { closeModal('msgModal'); executeSubmit(items); }; openModal('msgModal'); }
 
 async function deleteMaster(id) { setLoading(true); const { error } = await supaClient.from('master').delete().eq('part_number', id); setLoading(false); if(!error) { fetchMasterServerSide(); showToast(i18n[currentLang].deleted); } else showMsg("Error", error.message); }
-async function submitCreateMaster() { const id = document.getElementById('newId').value.trim(), model = document.getElementById('newModel').value, desc = document.getElementById('newDesc').value, unit = document.getElementById('newUnit').value, min = document.getElementById('newMinStock').value, dept = document.getElementById('newDept').value; if(!id) { showToast("ID Required", true); return; } setLoading(true); const { error } = await supaClient.from('master').insert([{ part_number: id, model, description: desc, unit, main_stock: min, department: dept }]); setLoading(false); if(!error) { fetchMasterServerSide(); closeModal('createModal'); showToast("Created!"); } else showMsg("Error", error.message); }
-function openCreateMasterModal() { ['newId','newModel','newDesc','newUnit'].forEach(id => document.getElementById(id).value = ""); document.getElementById('newMinStock').value = 0; document.getElementById('newDept').value = currentUserDept || "Pending"; document.getElementById('newUser').value = currentUserDisplayName; document.getElementById('masterFeedback').innerText = ""; openModal('createModal'); }
+async function submitCreateMaster() { 
+    const id = document.getElementById('newId').value.trim(), 
+          model = document.getElementById('newModel').value, 
+          desc = document.getElementById('newDesc').value, 
+          unit = document.getElementById('newUnit').value, 
+          min = document.getElementById('newMinStock').value, 
+          dept = document.getElementById('newDept').value; 
+    
+    if(!id) { showToast("ID Required", true); return; } 
+    // 🔥 防呆機制：如果沒選部門就不給建檔
+    if(!dept) { showToast(i18n[currentLang].msg_sel_dept, true); return; } 
+
+    setLoading(true); 
+    const { error } = await supaClient.from('master').insert([{ part_number: id, model, description: desc, unit, main_stock: min, department: dept }]); 
+    setLoading(false); 
+    
+    if(!error) { 
+        fetchMasterServerSide(); 
+        closeModal('createModal'); 
+        showToast("Created!"); 
+    } else {
+        showMsg("Error", error.message); 
+    }
+}
+function openCreateMasterModal() { 
+    ['newId','newModel','newDesc','newUnit'].forEach(id => document.getElementById(id).value = ""); 
+    document.getElementById('newMinStock').value = 0; 
+    // 🔥 每次打開視窗時，把部門下拉選單歸零，強迫 Admin 重新選擇
+    document.getElementById('newDept').value = ""; 
+    document.getElementById('newUser').value = currentUserDisplayName; 
+    document.getElementById('masterFeedback').innerText = ""; 
+    openModal('createModal'); 
+}
 function openReportModal() { const now = new Date(), y = now.getFullYear(), m = String(now.getMonth() + 1).padStart(2, '0'), d = String(now.getDate()).padStart(2, '0'); document.getElementById('rptStart').value = `${y}-${m}-01`; document.getElementById('rptEnd').value = `${y}-${m}-${d}`; openModal('reportModal'); }
 async function downloadReport() { const start = document.getElementById('rptStart').value, end = document.getElementById('rptEnd').value; if(!start || !end) { showToast("Select dates!", true); return; } setLoading(true); const endDay = new Date(end); endDay.setDate(endDay.getDate() + 1); const { data, error } = await supaClient.from('history').select('timestamp, reference, action, part_number, quantity, operator_user, note').gte('timestamp', start).lt('timestamp', endDay.toISOString()); setLoading(false); if(error) showMsg("Error", error.message); else if(!data || data.length === 0) showMsg("No Data", "No movements found."); else { const ws = XLSX.utils.json_to_sheet(data); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Report"); XLSX.writeFile(wb, `Report_${start}_to_${end}.xlsx`); closeModal('reportModal'); } }
 
