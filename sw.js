@@ -1,7 +1,5 @@
-// 1. 把版本號改成 v2 強制瀏覽器更新快取
+// 強制版本號升級，破除舊快取
 const CACHE_NAME = 'wms-cache-v9';
-
-// 2. 把前面的斜線 / 改成 ./ (相對路徑)
 const urlsToCache = [
   './', 
   './index.html', 
