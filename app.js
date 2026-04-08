@@ -15,9 +15,12 @@ let logoutTimer;
 const AUTO_LOGOUT_TIME = 30 * 60 * 1000; // 30 分鐘
 
 // 翻譯字庫
+// 翻譯字庫 (加入相機與掃描的翻譯)
 const i18n = {
-    en: { tab_inv: "Inventory", tab_dash: "Dashboard", tab_master: "Master Data", btn_refresh: "Refresh", btn_po: "Goods Receipt", btn_issue: "Goods Issue", btn_create: "Create Material", col_pn: "Part Number", col_model: "Model", col_desc: "Description", col_loc: "Loc", col_stock: "Stock", col_unit: "Unit", lbl_ref: "PO Number/Reference", lbl_user: "User", lbl_date: "Date", lbl_qty: "Qty", lbl_safe: "Safety Stock", btn_add_line: "Add Line", btn_cancel: "Cancel", btn_post: "Post", btn_save: "Save", btn_close: "Close", btn_ok: "OK", card_crit: "Critical Stock", sub_crit: "Items Out of Stock", card_low: "Low Stock", sub_low: "Below Safety Level", card_total: "Total Items", sub_total: "Active SKU Count", card_hist: "Recent Movements", modal_detail: "Details", txt_display: "Display", btn_logout: "Logout", btn_pwd: "Pwd", lbl_account: "Username", lbl_password: "Password", lbl_name: "Display Name", btn_signin: "Sign In", btn_signup: "Sign Up", btn_change: "Change", txt_new_user: "New User?", link_register: "Register Here", modal_reg_title: "Register Account", modal_cp_title: "Change Password", lbl_old_pass: "Old Password", lbl_new_pass: "New Password", lbl_confirm_pass: "Confirm New", msg_reg_success: "Register Success! Please Login.", msg_pass_changed: "Password Changed! Please login again.", msg_pass_mismatch: "Passwords do not match", msg_fill_all: "All fields required", confirm_post_title: "Post Confirmation", confirm_post_body: "Are you sure you want to post these transactions?", confirm_delete: "Delete this master data?", deleted: "Deleted!", msg_input_required: "Input Required", msg_input_empty: "Please fill in PO/Reference and User field.", txt_page: "Page", txt_of: "of", msg_unknown_title: "Unknown Part", msg_unknown_body: "Part not found in Master Data." },
-    zh: { tab_inv: "庫存列表", tab_dash: "管理看板", tab_master: "物料主檔", btn_refresh: "刷新", btn_po: "收貨入庫", btn_issue: "發貨領料", btn_create: "建立物料", col_pn: "料號", col_model: "型號", col_desc: "品名描述", col_loc: "儲位", col_stock: "庫存", col_unit: "單位", lbl_ref: "採購單號/用途", lbl_user: "操作人員", lbl_date: "日期", lbl_qty: "數量", lbl_safe: "安全庫存", btn_add_line: "新增項目", btn_cancel: "取消", btn_post: "過帳", btn_save: "儲存", btn_close: "關閉", btn_ok: "確定", card_crit: "缺料警告", sub_crit: "庫存為 0", card_low: "低庫存", sub_low: "低於安全水位", card_total: "物料總數", sub_total: "系統內 SKU", card_hist: "最近異動", modal_detail: "詳細資訊", txt_display: "查看", btn_logout: "登出", btn_pwd: "密碼", lbl_account: "帳號", lbl_password: "密碼", lbl_name: "顯示名稱", btn_signin: "登入", btn_signup: "註冊", btn_change: "修改", txt_new_user: "還沒帳號?", link_register: "點此註冊", modal_reg_title: "註冊帳號", modal_cp_title: "修改密碼", lbl_old_pass: "舊密碼", lbl_new_pass: "新密碼", lbl_confirm_pass: "確認新密碼", msg_reg_success: "註冊成功！請登入。", msg_pass_changed: "密碼已修改！請重新登入。", msg_pass_mismatch: "新密碼不一致", msg_fill_all: "請填寫所有欄位", confirm_post_title: "過帳確認", confirm_post_body: "您確定要提交這些異動資料嗎？", confirm_delete: "確定要刪除此物料主檔嗎？", deleted: "已刪除！", msg_input_required: "欄位必填", msg_input_empty: "請填寫單號/用途與操作人員欄位。", txt_page: "第", txt_of: "頁 / 共", msg_unknown_title: "未知料號", msg_unknown_body: "在系統主檔中找不到此料號。" }
+    en: { tab_inv: "Inventory", tab_dash: "Dashboard", tab_master: "Master Data", btn_refresh: "Refresh", btn_po: "Goods Receipt", btn_issue: "Goods Issue", btn_create: "Create Material", col_pn: "Part Number", col_model: "Model", col_desc: "Description", col_loc: "Loc", col_stock: "Stock", col_unit: "Unit", lbl_ref: "PO Number/Reference", lbl_user: "User", lbl_date: "Date", lbl_qty: "Qty", lbl_safe: "Safety Stock", btn_add_line: "Add Line", btn_cancel: "Cancel", btn_post: "Post", btn_save: "Save", btn_close: "Close", btn_ok: "OK", card_crit: "Critical Stock", sub_crit: "Items Out of Stock", card_low: "Low Stock", sub_low: "Below Safety Level", card_total: "Total Items", sub_total: "Active SKU Count", card_hist: "Recent Movements", modal_detail: "Details", txt_display: "Display", btn_logout: "Logout", btn_pwd: "Pwd", lbl_account: "Username", lbl_password: "Password", lbl_name: "Display Name", btn_signin: "Sign In", btn_signup: "Sign Up", btn_change: "Change", txt_new_user: "New User?", link_register: "Register Here", modal_reg_title: "Register Account", modal_cp_title: "Change Password", lbl_old_pass: "Old Password", lbl_new_pass: "New Password", lbl_confirm_pass: "Confirm New", msg_reg_success: "Register Success! Please Login.", msg_pass_changed: "Password Changed! Please login again.", msg_pass_mismatch: "Passwords do not match", msg_fill_all: "All fields required", confirm_post_title: "Post Confirmation", confirm_post_body: "Are you sure you want to post these transactions?", confirm_delete: "Delete this master data?", deleted: "Deleted!", msg_input_required: "Input Required", msg_input_empty: "Please fill in PO/Reference and User field.", txt_page: "Page", txt_of: "of", msg_unknown_title: "Unknown Part", msg_unknown_body: "Part not found in Master Data.",
+          ph_search: "Search / Scan...", title_scan: "Scan Barcode", msg_scan_ok: "Scanned: ", err_cam_title: "Camera Error", err_cam_msg: "Cannot access camera. Please check permissions.", modal_scan: "📷 Scan Barcode / QR Code" },
+    zh: { tab_inv: "庫存列表", tab_dash: "管理看板", tab_master: "物料主檔", btn_refresh: "刷新", btn_po: "收貨入庫", btn_issue: "發貨領料", btn_create: "建立物料", col_pn: "料號", col_model: "型號", col_desc: "品名描述", col_loc: "儲位", col_stock: "庫存", col_unit: "單位", lbl_ref: "採購單號/用途", lbl_user: "操作人員", lbl_date: "日期", lbl_qty: "數量", lbl_safe: "安全庫存", btn_add_line: "新增項目", btn_cancel: "取消", btn_post: "過帳", btn_save: "儲存", btn_close: "關閉", btn_ok: "確定", card_crit: "缺料警告", sub_crit: "庫存為 0", card_low: "低庫存", sub_low: "低於安全水位", card_total: "物料總數", sub_total: "系統內 SKU", card_hist: "最近異動", modal_detail: "詳細資訊", txt_display: "查看", btn_logout: "登出", btn_pwd: "密碼", lbl_account: "帳號", lbl_password: "密碼", lbl_name: "顯示名稱", btn_signin: "登入", btn_signup: "註冊", btn_change: "修改", txt_new_user: "還沒帳號?", link_register: "點此註冊", modal_reg_title: "註冊帳號", modal_cp_title: "修改密碼", lbl_old_pass: "舊密碼", lbl_new_pass: "新密碼", lbl_confirm_pass: "確認新密碼", msg_reg_success: "註冊成功！請登入。", msg_pass_changed: "密碼已修改！請重新登入。", msg_pass_mismatch: "新密碼不一致", msg_fill_all: "請填寫所有欄位", confirm_post_title: "過帳確認", confirm_post_body: "您確定要提交這些異動資料嗎？", confirm_delete: "確定要刪除此物料主檔嗎？", deleted: "已刪除！", msg_input_required: "欄位必填", msg_input_empty: "請填寫單號/用途與操作人員欄位。", txt_page: "第", txt_of: "頁 / 共", msg_unknown_title: "未知料號", msg_unknown_body: "在系統主檔中找不到此料號。",
+          ph_search: "搜尋 / 掃描...", title_scan: "掃描條碼", msg_scan_ok: "成功掃描: ", err_cam_title: "相機錯誤", err_cam_msg: "無法啟動相機，請確認是否給予權限。", modal_scan: "📷 掃描條碼 / QR Code" }
 };
 
 function getTrans(key) { return i18n[currentLang][key] || key; }
@@ -462,26 +465,26 @@ let html5QrcodeScanner;
 let currentScanInput = null;
 
 window.openScanner = function(btn) {
-    currentScanInput = btn.previousElementSibling; // 鎖定目前是哪一行的輸入框
+    currentScanInput = btn.previousElementSibling; 
     openModal('scannerModal');
     
     html5QrcodeScanner = new Html5Qrcode("reader");
     const config = { fps: 10, qrbox: { width: 250, height: 250 } };
     
-    // 啟動後置鏡頭
     html5QrcodeScanner.start({ facingMode: "environment" }, config, 
         (decodedText) => {
-            // 掃描成功！填入料號並自動觸發解析
             if(currentScanInput) {
                 currentScanInput.value = decodedText;
                 resolvePart(currentScanInput);
             }
             stopScanner();
-            showToast("成功掃描條碼: " + decodedText);
+            // 使用動態翻譯
+            showToast(i18n[currentLang].msg_scan_ok + decodedText);
         },
-        (errorMessage) => { /* 掃描中未辨識到條碼的背景錯誤，不需處理 */ }
+        (errorMessage) => { }
     ).catch(err => {
-        showMsg("相機錯誤", "無法啟動相機，請確認是否已給予瀏覽器相機權限。");
+        // 使用動態翻譯
+        showMsg(i18n[currentLang].err_cam_title, i18n[currentLang].err_cam_msg);
         closeModal('scannerModal');
     });
 };
@@ -504,9 +507,9 @@ window.addTxRow = function() {
     const tr = document.createElement('tr'), isIss = currentTxType === 'issue'; 
     tr.innerHTML = `
         <td style="position:relative;">
-            <div style="display:flex; align-items:center;">
-                <input type="text" class="tx-input tx-id" onkeyup="handleAutocomplete(this)" onchange="resolvePart(this)" placeholder="搜尋 / 掃描..." autocomplete="off">
-                <button class="btn-icon" onclick="openScanner(this)" title="掃描條碼">📷</button>
+            <div style="display:flex; align-items:center; gap:5px;">
+                <input type="text" class="tx-input tx-id" style="flex:1;" onkeyup="handleAutocomplete(this)" onchange="resolvePart(this)" placeholder="${i18n[currentLang].ph_search}" autocomplete="off">
+                <button class="btn-icon" onclick="openScanner(this)" title="${i18n[currentLang].title_scan}">📷</button>
             </div>
         </td>
         <td><input type="text" class="tx-input tx-info" readonly tabindex="-1"></td>
