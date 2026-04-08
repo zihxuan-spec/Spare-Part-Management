@@ -112,30 +112,133 @@ function setupRealtime() {
 
 function fetchData() { fetchDashboardStats(); fetchInventoryServerSide(true); fetchMasterServerSide(true); }
 
-// 🔥 終極版 Dashboard 讀取 (支援 Admin 無縫切換部門)
+let healthChartInstance = null;
+let trendChartInstance = null;
+
 async function fetchDashboardStats() {
     const target = getTargetDept();
     
-    let qCrit = supaClient.from('view_inventory').select('*', {count: 'exact', head: true}).eq('is_critical', true);
-    let qLow  = supaClient.from('view_inventory').select('*', {count: 'exact', head: true}).eq('is_low', true);
-    let qTot  = supaClient.from('view_inventory').select('*', {count: 'exact', head: true});
-    let qHist = supaClient.from('history').select('*').order('timestamp', {ascending: false});
+    // 1. 抓取庫存狀態
+    let qInv = supaClient.from('view_inventory').select('*');
+    if (target !== 'All' && target !== 'Admin') qInv = qInv.eq('department', target);
+    const { data: invData } = await qInv;
+    
+    let critCount = 0, lowCount = 0, safeCount = 0;
+    const invMap = {};
+    (invData || []).forEach(i => {
+        invMap[i.part_number] = i;
+        if (i.is_critical) critCount++;
+        else if (i.is_low) lowCount++;
+        else if (i.stock > 0) safeCount++;
+    });
 
-    // 如果不是看全公司，就要加上過濾器
+    document.getElementById('dashCrit').innerText = critCount;
+    document.getElementById('dashLow').innerText = lowCount;
+
+    // 2. 抓取最近 30 天歷史紀錄 (最高 1000 筆，以供前端交叉分析)
+    const thirtyDaysAgo = new Date(); thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30); thirtyDaysAgo.setHours(0,0,0,0);
+    let qHist = supaClient.from('history').select('*').gte('timestamp', thirtyDaysAgo.toISOString()).order('timestamp', {ascending: false}).limit(1000);
+    
     if (target !== 'All' && target !== 'Admin') {
-        qCrit = qCrit.eq('department', target);
-        qLow  = qLow.eq('department', target);
-        qTot  = qTot.eq('department', target);
-        
-        // 歷史紀錄的過濾魔法 (免新建 View，直接透過 master 的料號比對)
-        const { data: deptParts } = await supaClient.from('master').select('part_number').eq('department', target);
-        const partList = deptParts ? deptParts.map(p => p.part_number) : [];
-        if (partList.length > 0) {
-            qHist = qHist.in('part_number', partList);
-        } else {
-            qHist = qHist.eq('part_number', 'NO_MATCH_DUMMY'); 
-        }
+        const partList = Object.keys(invMap);
+        if (partList.length > 0) qHist = qHist.in('part_number', partList);
+        else qHist = qHist.eq('part_number', 'NO_MATCH_DUMMY');
     }
+    const { data: histData } = await qHist;
+
+    // 3. 資料處理：今日收發、7天趨勢、Top 5、呆滯料
+    const todayStr = new Date().toISOString().split('T')[0];
+    let todayIn = 0, todayOut = 0;
+    const trendMap = {}; 
+    const moveCount = {}; 
+
+    for(let i=6; i>=0; i--) { const d = new Date(); d.setDate(d.getDate() - i); trendMap[d.toISOString().split('T')[0]] = { in: 0, out: 0 }; }
+
+    (histData || []).forEach(h => {
+        const dateStr = h.timestamp.split('T')[0];
+        const qty = Number(h.quantity), absQty = Math.abs(qty);
+
+        if (dateStr === todayStr) {
+            if (h.action.includes('In') || qty > 0) todayIn++;
+            if (h.action.includes('Out') || qty < 0) todayOut++;
+        }
+        if (trendMap[dateStr]) {
+            if (h.action.includes('In') || qty > 0) trendMap[dateStr].in += absQty;
+            if (h.action.includes('Out') || qty < 0) trendMap[dateStr].out += absQty;
+        }
+        moveCount[h.part_number] = (moveCount[h.part_number] || 0) + absQty;
+    });
+
+    document.getElementById('dashTodayIn').innerText = todayIn;
+    document.getElementById('dashTodayOut').innerText = todayOut;
+
+    // 🔥 繪製 Recent Movements (顯示擴大為 20 筆，高度加高，字體更清晰)
+    document.getElementById('dashHistory').innerHTML = (histData || []).slice(0, 20).map(h => {
+        let qtyColor = h.quantity > 0 ? '#107e3e' : (h.quantity < 0 ? '#bb0000' : '#0a6ed1');
+        let qtySign = h.quantity > 0 ? '+' : '';
+        return `<div style="border-bottom:1px solid #eee; padding:10px 0;">
+            <span style="font-weight:bold; font-size:14px; color:var(--sap-primary);">${h.part_number}</span> 
+            <span style="float:right; font-size:15px; font-weight:bold; color:${qtyColor}">${qtySign}${h.quantity}</span>
+            <div style="font-size:11px; color:#666; margin-top:4px;">${new Date(h.timestamp).toLocaleString()} | 👤 ${h.operator_user} | ${h.action}</div>
+        </div>`;
+    }).join('') || '<div style="color:#999; padding:10px;">No Data</div>';
+
+    // 🔥 繪製 Top 5
+    const top5 = Object.entries(moveCount).sort((a,b) => b[1] - a[1]).slice(0, 5);
+    document.getElementById('dashTop5').innerHTML = top5.map((t, idx) => `
+        <div style="border-bottom:1px solid #eee; padding:10px 0; display:flex; align-items:center;">
+            <div style="width:24px; height:24px; background:#ffebeb; border-radius:50%; text-align:center; line-height:24px; font-size:12px; font-weight:bold; color:#bb0000; margin-right:10px;">${idx+1}</div>
+            <div style="flex:1;"><div style="font-weight:bold; font-size:13px;">${t[0]}</div><div style="font-size:11px; color:#888;">${(invMap[t[0]] || {}).model || ''}</div></div>
+            <div style="font-weight:bold; color:var(--sap-primary); font-size:14px;">${t[1]} <span style="font-size:10px;font-weight:normal;color:#888;">Mvmt</span></div>
+        </div>
+    `).join('') || '<div style="color:#999; padding:10px;">No Movements</div>';
+
+    // 🔥 繪製呆滯料預警 (庫存 > 0 且 30 天內未異動)
+    const deadList = Object.values(invMap).filter(i => i.stock > 0 && !moveCount[i.part_number]).sort((a,b) => b.stock - a.stock).slice(0, 10);
+    document.getElementById('dashDead').innerHTML = deadList.map(d => `
+        <div style="border-bottom:1px solid #eee; padding:10px 0;">
+            <span style="font-weight:bold; font-size:13px; color:#555;">${d.part_number}</span>
+            <span style="float:right; font-weight:bold; color:#e9730c; font-size:13px;">Stock: ${d.stock}</span>
+            <div style="font-size:11px; color:#888; margin-top:4px;">${d.model || '-'} | Loc: <span style="background:#f0f0f0;padding:2px 4px;border-radius:3px;">${d.location || 'N/A'}</span></div>
+        </div>
+    `).join('') || '<div style="color:#107e3e; padding:10px; font-weight:bold;">✅ All stock is moving actively!</div>';
+
+    // 繪製 Chart.js
+    updateCharts(critCount, lowCount, safeCount, trendMap);
+}
+
+function updateCharts(crit, low, safe, trendMap) {
+    const ctxHealth = document.getElementById('chartHealth').getContext('2d');
+    const ctxTrend = document.getElementById('chartTrend').getContext('2d');
+
+    if(healthChartInstance) healthChartInstance.destroy();
+    if(trendChartInstance) trendChartInstance.destroy();
+
+    healthChartInstance = new Chart(ctxHealth, {
+        type: 'doughnut',
+        data: {
+            labels: [i18n[currentLang].card_crit, i18n[currentLang].card_low, 'Safe Stock'],
+            datasets: [{ data: [crit, low, safe], backgroundColor: ['#bb0000', '#e9730c', '#107e3e'], borderWidth: 0 }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { position: 'right', labels:{boxWidth:12, font:{size:11}} } } }
+    });
+
+    const labels = Object.keys(trendMap).map(d => d.slice(5)); 
+    const dataIn = Object.values(trendMap).map(v => v.in);
+    const dataOut = Object.values(trendMap).map(v => v.out);
+
+    trendChartInstance = new Chart(ctxTrend, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                { label: 'Receipts (In)', data: dataIn, backgroundColor: '#107e3e', borderRadius: 3 },
+                { label: 'Issues (Out)', data: dataOut, backgroundColor: '#0a6ed1', borderRadius: 3 }
+            ]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top', labels:{boxWidth:12, font:{size:11}} } }, scales: { x: { grid: { display: false } }, y: { border: { display: false }, ticks: { precision: 0 } } } }
+    });
+}
 
     qHist = qHist.limit(10); 
 
