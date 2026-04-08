@@ -67,7 +67,15 @@
         </div>
         <div style="color:#6a6d70; font-size:12px; margin-top:8px;">Sunlit AZ / Spare Part Management</div>
     </div>
-    <button class="std-btn btn-transparent" onclick="fetchData()"><span style="font-size:16px;">↻</span> <span data-i18n="btn_refresh">Refresh</span></button>
+    <div style="display:flex; gap:10px; align-items:center;">
+        <select id="adminGlobalDept" class="std-input" style="display:none; width:130px; height:36px; padding:0 10px; font-size:13px; font-weight:bold; color:var(--sap-primary);" onchange="fetchData()">
+            <option value="All" data-i18n="opt_all_dept">All Depts</option>
+            <option value="QC">QC</option>
+            <option value="Production">Production</option>
+            <option value="Facility">Facility</option>
+        </select>
+        <button class="std-btn btn-transparent" onclick="fetchData()"><span style="font-size:16px;">↻</span> <span data-i18n="btn_refresh">Refresh</span></button>
+    </div>
 </div>
 
 <div class="content-area">
@@ -207,19 +215,15 @@
 <div id="scannerModal" class="modal-overlay" style="z-index: 10005;">
     <div class="std-dialog" style="width: 400px; max-width: 95%;">
         <div class="dialog-header">
-            <span>📷 掃描條碼 / QR Code</span>
+            <span data-i18n="modal_scan">📷 Scan Barcode / QR Code</span>
             <span style="cursor:pointer;" onclick="stopScanner()">✕</span>
         </div>
         <div class="dialog-content" style="padding: 0; background: #000;">
             <div id="reader" width="100%"></div> 
         </div>
         <div class="dialog-footer">
-            <button class="std-btn btn-transparent" onclick="stopScanner()">取消</button>
+            <button class="std-btn btn-transparent" onclick="stopScanner()" data-i18n="btn_cancel">Cancel</button>
         </div>
-        <div class="dialog-header">
-        <span data-i18n="modal_scan">📷 Scan Barcode / QR Code</span>
-        <span style="cursor:pointer;" onclick="stopScanner()">✕</span>
-        </div> 
     </div>
 </div>
 <div id="toast" class="toast"></div>
