@@ -60,7 +60,22 @@ function applyLoginState(name, uid, dept) {
     currentUserDisplayName = name; currentUserName = uid; currentUserDept = dept;
     document.getElementById('loginOverlay').style.display = 'none';
     if (dept === "Pending") { document.getElementById('pendingOverlay').style.display = 'flex'; return; }
-    document.getElementById('pendingOverlay').style.display = 'none'; document.getElementById('logoutBtn').style.display = 'block'; document.getElementById('changePassBtn').style.display = 'block'; document.getElementById('userInfoDisplay').innerText = `${name} (${dept})`;
+    document.getElementById('pendingOverlay').style.display = 'none'; 
+    document.getElementById('logoutBtn').style.display = 'block'; 
+    document.getElementById('changePassBtn').style.display = 'block'; 
+    document.getElementById('userInfoDisplay').innerText = `${name} (${dept})`;
+
+    // 🔥 新增：前端 UI 權限控管 (只有 Admin 看得到 Master Data)
+    if (dept === 'Admin') {
+        document.getElementById('tabMaster').style.display = 'block';
+    } else {
+        document.getElementById('tabMaster').style.display = 'none';
+        // 防呆：如果非 Admin 的人網頁本來停在 Master Data，強迫他切回 Dashboard
+        if (document.getElementById('tabMaster').classList.contains('active')) {
+            switchView('dashboard');
+        }
+    }
+
     setupRealtime(); fetchData(); 
     resetLogoutTimer();
 }
