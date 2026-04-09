@@ -122,7 +122,7 @@
             <button class="std-btn btn-excel" onclick="exportToExcel('inventory')">📥 Excel</button>
             <div class="spacer"></div>
             <div id="filterTag" onclick="applyFilter('all')"><span id="filterText">Filter Active</span> <span style="font-size:14px; margin-left:2px;">✕</span></div>
-            <input type="text" id="searchInv" class="std-input" style="width:250px;" placeholder="Search Inventory..." onkeyup="renderTable(true)">
+            <input type="text" id="searchInv" class="std-input" style="width:250px;" placeholder="Search Inventory..." onkeyup="fetchInventoryServerSide(true)">
         </div>
         <div class="table-container">
             <table>
@@ -140,7 +140,7 @@
             <button class="std-btn btn-master" onclick="openCreateMasterModal()"><span data-i18n="btn_create">Create Material</span></button>
             <button class="std-btn btn-excel" onclick="exportToExcel('master')">📥 Excel</button>
             <div class="spacer"></div>
-            <input type="text" id="searchMaster" class="std-input" style="width:250px;" placeholder="Search Master Data..." onkeyup="renderMasterTable(true)">
+            <input type="text" id="searchMaster" class="std-input" style="width:250px;" placeholder="Search Master Data..." onkeyup="fetchMasterServerSide(true)">
         </div>
         <div class="table-container">
             <table>
