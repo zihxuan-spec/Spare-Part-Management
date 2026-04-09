@@ -341,15 +341,32 @@ async function openDetailsObj(item) {
 
 // 5. 交易層與其他工具
 async function resolvePart(input) {
-    const id = input.value.trim(), row = input.parentElement.parentElement; row.querySelector('.tx-info').value = ""; row.querySelector('.tx-loc').value = ""; if (!id) return;
+    const id = input.value.trim();
+    // 使用 closest('tr') 不管包了幾層 div，都能精準找到這筆資料的「那一行」
+    const row = input.closest('tr'); 
+    if (!row) return;
+
+    const infoInput = row.querySelector('.tx-info');
+    const locInput = row.querySelector('.tx-loc');
+    
+    if(infoInput) infoInput.value = ""; 
+    if(locInput) locInput.value = ""; 
+    if (!id) return;
+
     const { data } = await supaClient.from('view_inventory').select('*').eq('part_number', id).maybeSingle();
     if(data) {
-        row.querySelector('.tx-info').value = data.description || data.model;
-        if(currentTxType === 'receive' || currentTxType === 'issue') row.querySelector('.tx-loc').value = data.location || "";
+        if(infoInput) infoInput.value = data.description || data.model;
+        if(currentTxType === 'receive' || currentTxType === 'issue') {
+            if(locInput) locInput.value = data.location || "";
+        }
     } else if (currentTxType === 'receive') {
         const { data: mData } = await supaClient.from('master').select('*').eq('part_number', id).maybeSingle();
-        if(mData) row.querySelector('.tx-info').value = mData.description || mData.model;
-        else { showMsg(i18n[currentLang].msg_unknown_title, i18n[currentLang].msg_unknown_body); input.value = ""; }
+        if(mData) {
+            if(infoInput) infoInput.value = mData.description || mData.model;
+        } else { 
+            showMsg(i18n[currentLang].msg_unknown_title, i18n[currentLang].msg_unknown_body); 
+            input.value = ""; 
+        }
     }
 }
 
@@ -456,30 +473,40 @@ let autocompleteTimer;
 window.handleAutocomplete = function(input) {
     clearTimeout(autocompleteTimer);
     const val = input.value.trim();
-    let listDiv = input.nextElementSibling;
-    if (listDiv && listDiv.className === 'autocomplete-list') listDiv.remove();
+    
+    // 更安全的移除舊選單方式
+    let existingList = input.parentNode.querySelector('.autocomplete-list');
+    if (existingList) existingList.remove();
+    
     if (!val) return;
 
     autocompleteTimer = setTimeout(async () => {
         let query = supaClient.from('master').select('part_number, model');
         const target = getTargetDept();
+        // 確保只有選擇特定部門時才過濾
         if (target !== 'All' && target !== 'Admin') query = query.eq('department', target);
         
         const { data, error } = await query.or(`part_number.ilike.%${val}%,model.ilike.%${val}%`).limit(10);
         
         if (error || !data || data.length === 0) return;
 
-        listDiv = input.nextElementSibling;
-        if (listDiv && listDiv.className === 'autocomplete-list') listDiv.remove();
+        // 再次檢查，避免手速太快產生重複選單
+        existingList = input.parentNode.querySelector('.autocomplete-list');
+        if (existingList) existingList.remove();
 
-        listDiv = document.createElement('div');
+        let listDiv = document.createElement('div');
         listDiv.className = 'autocomplete-list';
         
         data.forEach(item => {
             const div = document.createElement('div');
             div.className = 'autocomplete-item';
             div.innerHTML = `<strong style="color:var(--sap-primary);">${item.part_number}</strong><br><span style="color:#666;font-size:11px;">${item.model || ''}</span>`;
-            div.onclick = () => { input.value = item.part_number; listDiv.remove(); resolvePart(input); };
+            div.onclick = () => { 
+                input.value = item.part_number; 
+                listDiv.remove(); 
+                // 點擊後觸發帶出品名
+                resolvePart(input); 
+            };
             listDiv.appendChild(div);
         });
         
