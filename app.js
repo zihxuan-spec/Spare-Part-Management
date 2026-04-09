@@ -342,7 +342,7 @@ async function openDetailsObj(item) {
 // 5. 交易層與其他工具
 async function resolvePart(input) {
     const id = input.value.trim();
-    // 使用 closest('tr') 不管包了幾層 div，都能精準找到這筆資料的「那一行」
+    // 💡 關鍵修復：使用 closest('tr')，不管外面包了幾層 div，都能準確找到「這一整列」
     const row = input.closest('tr'); 
     if (!row) return;
 
@@ -474,44 +474,45 @@ window.handleAutocomplete = function(input) {
     clearTimeout(autocompleteTimer);
     const val = input.value.trim();
     
-    // 更安全的移除舊選單方式
     let existingList = input.parentNode.querySelector('.autocomplete-list');
     if (existingList) existingList.remove();
-    
     if (!val) return;
 
     autocompleteTimer = setTimeout(async () => {
         let query = supaClient.from('master').select('part_number, model');
         const target = getTargetDept();
-        // 確保只有選擇特定部門時才過濾
         if (target !== 'All' && target !== 'Admin') query = query.eq('department', target);
         
         const { data, error } = await query.or(`part_number.ilike.%${val}%,model.ilike.%${val}%`).limit(10);
         
         if (error || !data || data.length === 0) return;
 
-        // 再次檢查，避免手速太快產生重複選單
         existingList = input.parentNode.querySelector('.autocomplete-list');
         if (existingList) existingList.remove();
 
         let listDiv = document.createElement('div');
         listDiv.className = 'autocomplete-list';
+        // 確保下拉選單在最上層，不會被對話框吃掉
+        listDiv.style.cssText = "position:absolute; top:100%; left:0; right:0; background:white; border:1px solid #d9d9d9; z-index:99999; max-height:180px; overflow-y:auto; box-shadow:0 4px 10px rgba(0,0,0,0.2); margin-top:2px; border-radius:4px;";
         
         data.forEach(item => {
             const div = document.createElement('div');
             div.className = 'autocomplete-item';
+            div.style.cssText = "padding:8px 10px; border-bottom:1px solid #f0f0f0; cursor:pointer;";
             div.innerHTML = `<strong style="color:var(--sap-primary);">${item.part_number}</strong><br><span style="color:#666;font-size:11px;">${item.model || ''}</span>`;
-            div.onclick = () => { 
+            
+            // 💡 關鍵修復：使用 onmousedown 取代 onclick，避免輸入框提早失去焦點引發系統衝突
+            div.onmousedown = (e) => { 
+                e.preventDefault(); 
                 input.value = item.part_number; 
                 listDiv.remove(); 
-                // 點擊後觸發帶出品名
                 resolvePart(input); 
             };
             listDiv.appendChild(div);
         });
         
         input.parentNode.style.position = 'relative';
-        input.parentNode.insertBefore(listDiv, input.nextSibling);
+        input.parentNode.appendChild(listDiv);
     }, 300);
 };
 
